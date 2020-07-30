@@ -1,10 +1,9 @@
 # pyCrossfade
-[Projects Goal]
 pyCrossfade is born out of a personal effort to create a customizable and beat-matched crossfade functionality. 
 
+---------
 
 ## Installation
----------
 
 ### Dependencies
 
@@ -36,8 +35,6 @@ brew install rubberband
 
 ### Python Dependencies
 
-
-
 |Package|Used For|
 |---|---|
 |[Cython](https://github.com/cython/cython) | Required by _madmom_ package.|
@@ -55,27 +52,27 @@ Installing `madmom` package alone, if `Cython` package is not installed before h
 ```bash
 pip install pycrossfade
 ```
-### About music used in demo
 
 
 
-
-
-## About This Project
 ---------
+## About This Project
 This project's main goal is to create seamless crossfade transitions between music files. This requires some DJ'ing abilities such as _bpm changing_, _beat-matching_ and _equalizer manipulation_.
 
 
 #### Some Definitions on Music Domain 
 [Beat](https://en.wikipedia.org/wiki/Beat_(music))
+
 In music and music theory, the beat is the basic unit of time, the pulse or regularly repeating event. 
 The beat is often defined as the rhythm listeners would tap their toes to when listening to a piece of music. 
 
 
 [Bar (Measure)](https://en.wikipedia.org/wiki/Bar_(music))
+
 In musical notation, a bar (or measure) is a segment of time corresponding to a specific number of beats, usually 4.
 
 [Downbeat](https://en.wikipedia.org/wiki/Beat_(music)#Downbeat_and_upbeat)
+
 The downbeat is the first beat of the bar, i.e. number 1.
 
 
@@ -96,28 +93,33 @@ This is the second song with 20 bars.
 ![Escape.mp3 and  Downbeats](./assets/images/Eyeillfals-Escape-Downbeats.png)
 > First song's waveform is blue and it's bars denoted with red lines. Second song is shown with colors of orange and green. 
 
-When we put them on top of each other, we can see that their beats is not matched, resulting in distorted audio.
+When we put them on top of each other, we can see that their beats(red and green lines) is not matched, resulting in clashing of drums - or distorted audio.
 
 
 Even though they have same amount of bars, resulting plot shows that second song is shorter. This is beacuse they have different BPMs - or speeds.
 
+If every song had regular beat timing, then beat-matching would be easy as just time stretching the other song to match their speeds. However, because of _humanizing_, every bar can be different in length. For this reason, pyCrossfade applies beat matching on the level of bars.
+
+##### Beat Matching on the level of every bar
+
+
+pyCrossfade lets you define every transition's length in bars, lets take it as _K_ bars. This way when we get _master song_'s last K bars, and _slave song_'s first K bars, we can apply beat-matching to achive seamless transition.
 
 
 ### equalizer manipulation
 
-### madmom beat tracking
 
 ### Approach master slave
 
 ### example code
 
-### musics
 
-jamendo - https://www.jamendo.com
- Milecklaster - Majed Salih https://www.jamendo.com/track/1765941/milecklaster
 
-  Highway - Soundrider/Dope https://www.jamendo.com/track/1764828/highway
+### About music used in examples
 
-  Escape - Faylasuf ft. Peter Baran https://www.jamendo.com/track/1753056/faylasuf-escape-ft-peter-baran
+These music files are from [Jamendo](https://www.jamendo.com) and published under Creative Commons License. All rights of the songs belongs to their respective owners.
 
-Eyeillfals - Majed Salih https://www.jamendo.com/track/1754135/eyeillfals
+- [Milecklaster - Majed Salih](https://www.jamendo.com/track/1765941/milecklaster)
+- [Highway - Soundrider/Dope](https://www.jamendo.com/track/1764828/highway)
+- [Escape - Faylasuf ft. Peter Baran](https://www.jamendo.com/track/1753056/faylasuf-escape-ft-peter-baran)
+- [Eyeillfals - Majed Salih](https://www.jamendo.com/track/1754135/eyeillfals)

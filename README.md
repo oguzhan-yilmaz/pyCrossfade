@@ -52,9 +52,39 @@ Installing `madmom` package alone, if `Cython` package is not installed before h
 ```bash
 pip install pycrossfade
 ```
+----
+## Example Usage
+#### Transitioning Between Two Songs
+```python
+from pycrossfade.song import Song
+from pycrossfade.transition import crossfade
+from pycrossfade.utils import save_audio
+# creating master and slave songs
+master_song = Song('/path/to/master_song.mp3')
+slave_song = Song('/path/to/slave_song.mp3')
+# creating crossfade with bpm matching
+output_audio = crossfade(master_song, slave_song, len_crossfade=8, len_time_strecth=8)
+# saving the output
+save_audio(output_audio, '/path/to/save/mix.wav')
+```
 
+#### Transitioning Between Multiple Songs
 
-
+```python
+from pycrossfade.song import Song
+from pycrossfade.transition import crossfade_multiple
+from pycrossfade.utils import save_audio
+# creating songs
+song_list = [
+  Song('/path/to/song_one.mp3'),
+  Song('/path/to/song_two.mp3'),
+  Song('/path/to/song_three.mp3'),
+]
+# creating crossfade with bpm matching
+output_audio = crossfade_multiple(song_list, len_crossfade=16, len_time_strecth=8)
+# saving the output
+save_audio(output_audio, '/path/to/save/mix_multiple.wav')
+```
 ---------
 ## About This Project
 This project's main goal is to create seamless crossfade transitions between music files. This requires some DJ'ing abilities such as _bpm changing_, _beat-matching_ and _equalizer manipulation_.
@@ -75,12 +105,16 @@ This project's main goal is to create seamless crossfade transitions between mus
 ### BPM Matching
 The creation of a transition requires two songs, called master and slave songs. Master song is the currently playing track and slave song refers to the next track.   
 
-Master and slave tracks can be in different BPM's or speeds, so before applying crossfade, we have to gradually increase/decrease to master track's speed to match slave's speed. Let's say master song has 90 bpm, and slave song has 135 bpm. This makes slave song 1.5x faster than master song. If we were to 
+Master and slave tracks can be in different BPM's or speeds, so before applying crossfade, we have to gradually increase/decrease to master track's speed to match slave's speed. Let's say master song has 90 bpm, and slave song has 135 bpm. This makes slave song 1.5x faster than master song. If we were to suddenly increase the speed 1.5x that would be harsh on the listeners ear.
+
+#### Gradually Time Stretching On Downbeats
+Before applying crossfade, to match the bpm's of two songs, master song's speed is gradually increased on bar, 
+
 
 A simple visualization of the process would be like this:
 > *master song* | *bpm matching* | *crossfade* | *slave song*
-ı||ı|ı||||ı||ı||||ı|||ı||ı||ı||ı||ıı||ı||ı||ııı||ııııııııııııııııııı 
----------------------------------------ııııııııııııııııııı||ı||ııı|||ı||ııı|||ı||ııı|ıı||||ıı
+> ı||ı|ı||||ı||ı||||ı|||ı||ı||ı||ı||ıı||ı||ı||ııı||ııııııııııııııııııı 
+> ---------------------------------------ııııııııııııııııııı||ı||ııı|||ı||ııı|||ı||ııı|ıı||||ıı
 
 
 ### pyCrossfade's Approach To Perfect Beat Matching

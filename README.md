@@ -1,4 +1,4 @@
-# pyCrossfade
+![pyCrossfade Logo](./assets/images/logo.png)
 pyCrossfade is born out of a personal effort to create a customizable and beat-matched crossfade functionality. 
 
 ---------
@@ -61,19 +61,26 @@ This project's main goal is to create seamless crossfade transitions between mus
 
 
 #### Some Definitions on Music Domain 
-[Beat](https://en.wikipedia.org/wiki/Beat_(music))
+- [Beat](https://en.wikipedia.org/wiki/Beat_(music))
+  In music and music theory, the beat is the basic unit of time, the pulse or regularly repeating event. 
+  The beat is often defined as the rhythm listeners would tap their toes to when listening to a piece of music. 
 
-In music and music theory, the beat is the basic unit of time, the pulse or regularly repeating event. 
-The beat is often defined as the rhythm listeners would tap their toes to when listening to a piece of music. 
+- [Bar (Measure)](https://en.wikipedia.org/wiki/Bar_(music))
+  In musical notation, a bar (or measure) is a segment of time corresponding to a specific number of beats, usually 4.
+
+- [Downbeat](https://en.wikipedia.org/wiki/Beat_(music)#Downbeat_and_upbeat)
+  The downbeat is the first beat of the bar, i.e. number 1.
 
 
-[Bar (Measure)](https://en.wikipedia.org/wiki/Bar_(music))
+### BPM Matching
+The creation of a transition requires two songs, called master and slave songs. Master song is the currently playing track and slave song refers to the next track.   
 
-In musical notation, a bar (or measure) is a segment of time corresponding to a specific number of beats, usually 4.
+Master and slave tracks can be in different BPM's or speeds, so before applying crossfade, we have to gradually increase/decrease to master track's speed to match slave's speed. Let's say master song has 90 bpm, and slave song has 135 bpm. This makes slave song 1.5x faster than master song. If we were to 
 
-[Downbeat](https://en.wikipedia.org/wiki/Beat_(music)#Downbeat_and_upbeat)
-
-The downbeat is the first beat of the bar, i.e. number 1.
+A simple visualization of the process would be like this:
+> *master song* | *bpm matching* | *crossfade* | *slave song*
+ı||ı|ı||||ı||ı||||ı|||ı||ı||ı||ı||ıı||ı||ı||ııı||ııııııııııııııııııı 
+---------------------------------------ııııııııııııııııııı||ı||ııı|||ı||ııı|||ı||ııı|ıı||||ıı
 
 
 ### pyCrossfade's Approach To Perfect Beat Matching
@@ -106,10 +113,12 @@ If every song had regular beat timing, then beat-matching would be easy as just 
 pyCrossfade lets you define every transition's length in bars, lets take it as _K_ bars. This way when we get _master song_'s last K bars, and _slave song_'s first K bars, we can apply beat-matching to achive seamless transition.
 
 
+
+
 ### equalizer manipulation
 
 
-### Approach master slave
+
 
 ### example code
 

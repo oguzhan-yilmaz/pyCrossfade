@@ -114,9 +114,9 @@ Before applying crossfade, to match the bpm's of two songs, master song's speed 
 A simple visualization of the process would be like this:
 > *master song* | *bpm matching* | *crossfade* | *slave song*
 
-> ı||ı|ı||||ı||ı||||ı|||ı||ı||ı||ı||ıı||ı||ı|ıı||ı|||ııı||ııııııııııııııııııı 
+> ı||ı|ı||||ı||ı||||ı|||ı||ı||ı||ı||ıı||ı||ı|ıı||ı|ıı||ııııııııııııııııııı 
 
-> ----------------------------------ııııııııııııııııııı||ı||ııı|||ı||ııı|||ı||ııı|ıı||||ıı
+> -----------------------------ııııııııııııııııııı||ı||ııı|||ı||ııı|||ı||ııı|ıı||||ıı
 
 
 ### pyCrossfade's Approach To Perfect Beat Matching

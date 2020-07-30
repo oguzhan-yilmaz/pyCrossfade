@@ -115,6 +115,7 @@ A simple visualization of the process would be like this:
 > *master song* | *bpm matching* | *crossfade* | *slave song*
 
 > ı||ı|ı||||ı||ı||||ı|||ı||ı||ı||ı||ıı||ı||ı||ııı||ııııııııııııııııııı 
+
 > ---------------------------------------ııııııııııııııııııı||ı||ııı|||ı||ııı|||ı||ııı|ıı||||ıı
 
 

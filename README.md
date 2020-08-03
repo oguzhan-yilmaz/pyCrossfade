@@ -169,15 +169,3 @@ If every song had regular beat timing, then beat-matching would be easy as just 
 
 
 pyCrossfade lets you define every transition's length in bars, lets take it as _K_ bars. This way when we get _master song_'s last K bars, and _slave song_'s first K bars, we can apply beat-matching to achive seamless transition.
-
-
-
-----
-#### About music used in examples
-
-These music files are from [Jamendo](https://www.jamendo.com) and published under Creative Commons License. All rights of the songs belongs to their respective owners.
-
-- [Milecklaster - Majed Salih](https://www.jamendo.com/track/1765941/milecklaster)
-- [Highway - Soundrider/Dope](https://www.jamendo.com/track/1764828/highway)
-- [Escape - Faylasuf ft. Peter Baran](https://www.jamendo.com/track/1753056/faylasuf-escape-ft-peter-baran)
-- [Eyeillfals - Majed Salih](https://www.jamendo.com/track/1754135/eyeillfals)

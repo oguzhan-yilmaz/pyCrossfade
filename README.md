@@ -1,5 +1,5 @@
 ![pyCrossfade Logo](./assets/images/logo.png)
-pyCrossfade is born out of a personal effort to create a customizable and beat-matched crossfade functionality. 
+pyCrossfade is born out of a personal effort to create a customizable and beat-matched crossfade functionality.
 
 ---------
 
@@ -82,7 +82,7 @@ output_audio = crossfade_multiple(song_list, len_crossfade=16, len_time_stretch=
 save_audio(output_audio, '/path/to/save/mix_multiple.wav')
 ```
 
-#### Transitioning Between Songs On Spesific Bars
+#### Transitioning Between Songs On Specific Bars
 
 ```python
 from pycrossfade.song import Song
@@ -101,7 +101,7 @@ song_list = [
 # creating crossfade with bpm matching
 output_audio = crossfade_multiple(song_list, len_crossfade=8, len_time_stretch=8)
 # saving the output
-save_audio(output_audio, '/path/to/save/mix_multiple_spesific_bars.wav')
+save_audio(output_audio, '/path/to/save/mix_multiple_specific_bars.wav')
 ```
 
 ---------
@@ -168,4 +168,10 @@ If every song had regular beat timing, then beat-matching would be easy as just 
 ##### Beat Matching on the level of every bar
 
 
-pyCrossfade lets you define every transition's length in bars, lets take it as _K_ bars. This way when we get _master song_'s last K bars, and _slave song_'s first K bars, we can apply beat-matching to achive seamless transition.
+pyCrossfade lets you define every transition's length in bars, lets take it as _K_ bars. Then it gets _master song_'s last K bars, and _slave song_'s first K bars, and applies beat matching on each bar. This is ensures the created transition is perfectly beat-matched even if the songs are _humanized_ or not.
+
+### Possible Improvements
+
+- Better(maybe Non-Linear) EQ Filtering
+- Volume Balancing with Replay Gain
+- Optimizing Crossfade EQ Filtering Parameters According to Music

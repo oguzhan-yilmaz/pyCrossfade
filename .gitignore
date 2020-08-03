@@ -4,8 +4,5 @@ pycrossfade_annotations/
 Dockerfile
 docker-compose.yml
 main.py
-examples/music_files/Milecklaster.mp3
-examples/music_files/Highway.mp3
-examples/music_files/Eyeillfals.mp3
 multiple_song_mix.wav
 output_multiple.wav

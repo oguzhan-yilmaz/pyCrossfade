@@ -140,20 +140,40 @@ The creation of a transition requires two songs, called master and slave songs. 
 Master and slave tracks can be in different BPM's or speeds, so before applying crossfade, we have to gradually increase/decrease to master track's speed to match slave's speed. Let's say master song has 90 bpm, and slave song has 135 bpm. This makes slave song 1.5x faster than master song. If we were to suddenly increase the speed 1.5x that would be harsh on the listeners ear.
 
 #### Gradually Time Stretching On Downbeats
-Before applying crossfade, to match the bpm's of two songs, master song's speed is gradually increased on given number of downbeats. This ensures the listening experience quality. This works linearly, as can be seen in the below example.
-
-> `final_factor` =  1.10 (times faster)
-
-> `len_time_stretch` = 10 (in 10 bars)
-
-> | bars | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 
-
-> | | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-
-> | time stretching factor | 1.01x | 1.02x | 1.03x | 1.04x | 1.05x | 1.06x | 1.07x | 1.08x | 1.09x | 1.10x | 
+Before applying crossfade, to match the bpm's of two songs, master song's speed is gradually increased on given number of downbeats. This ensures the listening experience quality. This works linearly as can be seen in the table below.
 
 
-A simple visualization of the process would be like this:
+
+##### Example 
+```python
+from pycrossfade.transition import crop_audio_and_dbeats \
+                                   time_stretch_gradually_in_downbeats 
+   
+from pycrossfade.song import Song
+from pycrossfade.utils import save_audio
+
+my_song = Song('some/path/to/a/song.mp3')
+
+final_factor =  1.10 # times faster
+
+# returns a new Song obj. cropped from my_song's between given parameter downbeats(or bars). 
+sample = crop_audio_and_dbeats(my_song, 50, 60) # sample of 10 bars   
+
+# increases the sample song's speed gradually
+sample_but_faster_every_beat = time_stretch_gradually_in_downbeats(sample, final_factor)
+
+save_audio(sample_but_faster_every_beat, 'some/output/path.wav', file_format='wav', bit_rate=320)
+```
+
+
+| bars | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |  Final Factor | 
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| *Time Stretching Factor* | 1.01x | 1.02x | 1.03x | 1.04x | 1.05x | 1.06x | 1.07x | 1.08x | 1.09x | 1.10x | *1.10x* | 
+
+
+
+### Overview of the Transition
+A simple visualization of all the processes would be like this:
 > *master song* | *bpm matching* | *crossfade* | *slave song*
 
 > ı||ı|ı||||ı||ı||||ı|||ı||ı||ı||ı||ıı||ı||ı|ıı||ı|ıı||ııııııııııııııııııı 
@@ -194,4 +214,4 @@ pyCrossfade lets you define every transition's length in bars, lets take it as _
 
 - Better(maybe Non-Linear) EQ Filtering
 - Volume Balancing with Replay Gain
-- Optimizing Crossfade EQ Filtering Parameters According to Musics Features
+- Developing a better Crossfade EQ Filtering

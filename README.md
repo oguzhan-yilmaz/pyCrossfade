@@ -35,6 +35,16 @@ brew install rubberband
 
 ### Python Dependencies
 
+#### Installation
+
+To install the projects dependencies run:
+
+```bash
+pip install -r requirements.txt
+```
+
+*!* _if you get an error about `Cython` refer to [https://github.com/oguzhan-yilmaz/pyCrossfade#a-note-on-the-python-dependencies](this tip.)_
+
 |Package|Used For|
 |---|---|
 |[Cython](https://github.com/cython/cython) | Required by _madmom_ package.|
@@ -122,7 +132,7 @@ This project's main goal is to create seamless crossfade transitions between mus
 
 ### About Madmom's Beat Tracking
 
-Madmom's Beat Tracking takes a long time to run, 45-150 seconds depending on the music file. It gives a `numpy array` as output, so when madmom finishes calculating, pyCrossfade saves the said `numpy array` in a text file named after the song, under the folder `pycrossfade_annotations`.  
+Madmom's Beat Tracking takes a long time to run, 45-150 seconds depending on the music file. It gives a `numpy array` as output, so when madmom finishes calculating, pyCrossfade saves/caches the said `numpy array` in a text file named after the song, under the folder `pycrossfade_annotations`. This makes pyCrossfade robust while working with same songs by avoiding heavy calculations every time.
 
 ### BPM Matching
 The creation of a transition requires two songs, called master and slave songs. Master song is the currently playing track and slave song refers to the next track.   
@@ -130,7 +140,13 @@ The creation of a transition requires two songs, called master and slave songs. 
 Master and slave tracks can be in different BPM's or speeds, so before applying crossfade, we have to gradually increase/decrease to master track's speed to match slave's speed. Let's say master song has 90 bpm, and slave song has 135 bpm. This makes slave song 1.5x faster than master song. If we were to suddenly increase the speed 1.5x that would be harsh on the listeners ear.
 
 #### Gradually Time Stretching On Downbeats
-Before applying crossfade, to match the bpm's of two songs, master song's speed is gradually increased on given number of downbeats. This ensures the listening experience quality.
+Before applying crossfade, to match the bpm's of two songs, master song's speed is gradually increased on given number of downbeats. This ensures the listening experience quality. This works linearly, as can be seen in the below example.
+
+> `final_factor` =  1.10 (times faster)
+> `len_time_stretch` = 10 (in 10 bars)
+> | bars | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 
+> | | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+> | time stretching factor | 1.01x | 1.02x | 1.03x | 1.04x | 1.05x | 1.06x | 1.07x | 1.08x | 1.09x | 1.10x | 
 
 
 A simple visualization of the process would be like this:
@@ -174,4 +190,4 @@ pyCrossfade lets you define every transition's length in bars, lets take it as _
 
 - Better(maybe Non-Linear) EQ Filtering
 - Volume Balancing with Replay Gain
-- Optimizing Crossfade EQ Filtering Parameters According to Music
+- Optimizing Crossfade EQ Filtering Parameters According to Musics Features

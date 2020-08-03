@@ -3,3 +3,4 @@ numpy==1.19.0
 pyrubberband==0.3.0
 essentia==2.1b6.dev234
 yodel==0.3.0
+madmom==0.16.1

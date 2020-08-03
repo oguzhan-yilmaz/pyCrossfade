@@ -43,7 +43,7 @@ To install the projects dependencies run:
 pip install -r requirements.txt
 ```
 
-*!* _if you get an error about `Cython` refer to [https://github.com/oguzhan-yilmaz/pyCrossfade#a-note-on-the-python-dependencies](this tip.)_
+*!* _if you get an error about `Cython` refer to [this tip.](https://github.com/oguzhan-yilmaz/pyCrossfade#a-note-on-the-python-dependencies)_
 
 |Package|Used For|
 |---|---|
@@ -143,9 +143,13 @@ Master and slave tracks can be in different BPM's or speeds, so before applying 
 Before applying crossfade, to match the bpm's of two songs, master song's speed is gradually increased on given number of downbeats. This ensures the listening experience quality. This works linearly, as can be seen in the below example.
 
 > `final_factor` =  1.10 (times faster)
+
 > `len_time_stretch` = 10 (in 10 bars)
+
 > | bars | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 
+
 > | | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+
 > | time stretching factor | 1.01x | 1.02x | 1.03x | 1.04x | 1.05x | 1.06x | 1.07x | 1.08x | 1.09x | 1.10x | 
 
 

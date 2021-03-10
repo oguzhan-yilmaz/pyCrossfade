@@ -31,7 +31,7 @@ def time_stretch_gradually_in_downbeats(song, final_factor):
     # Since we are time stretching *in-between* down beats, dbeat array has to
     # include the +1 dbeat in itself
     if final_factor == 1:
-        return audio
+        return song.audio
 
     audio = song.audio
     dbeats = song.get_downbeats()

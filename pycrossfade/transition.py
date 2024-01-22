@@ -30,10 +30,11 @@ def crop_audio_and_dbeats(song, start_dbeat, end_dbeat):
 def time_stretch_gradually_in_downbeats(song, final_factor):
     # Since we are time stretching *in-between* down beats, dbeat array has to
     # include the +1 dbeat in itself
+    audio = song.audio
+
     if final_factor == 1:
         return audio
 
-    audio = song.audio
     dbeats = song.get_downbeats()
 
     ts_factor_step_len = (final_factor - 1.0) / (len(dbeats) - 1)

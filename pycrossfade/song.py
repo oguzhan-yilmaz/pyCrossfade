@@ -2,6 +2,7 @@ import numpy as np
 import madmom 
 import utils
 import os
+import cliconfig
 
 
 class Song():
@@ -21,22 +22,36 @@ class Song():
             self.populate_attributes()
 
 
-    def print_attribute_table(self):
-        
-        utils.print_dict_table(self.attributes, header_key="Attribute", header_value="Value", print_header=True)
 
     def populate_attributes(self):
         self.attributes = {
             "Name": self.song_name,
             "Format": self.song_format,
-            "Downbeats": len(self.get_downbeats()),
+            "Downbeats/Bars": len(self.get_downbeats()),
+            "Beats": len(self.beats),
             "Duration": self.get_duration(),
             "DurationSeconds": int(self.duration_seconds),
             "SampleRate": self.sample_rate,
             "File": self.filepath
         }
+        
+        
+    def extract(self, save_result=True):
+        if save_result:
+            result_filepath = utils.save_music_extractor_results(self)
+            print(f"> Essentia MusicExtractor results saved to: {result_filepath}.")
+            print()
+            
+        utils.music_extractor(self)
+
+
+    def print_attribute_table(self, print_header=True):
+        utils.print_dict_as_table(self.attributes, header_key="Attribute", header_value="Value", print_header=print_header)
+
     def __str__(self):
         return f"{self.song_name}.{self.song_format} :: {self.filepath}"
+    
+    
     #def plot_downbeats(self, start_dbeat, end_dbeat, plot_name='', color='red'):
     #    import matplotlib.pyplot as plt
     #    plt.rcParams['figure.figsize'] = (20, 9) 
@@ -83,7 +98,7 @@ class Song():
         return self.downbeats
 
     def load_beats(self):
-        annotations_folder_name = 'pycrossfade_annotations'
+        annotations_folder_name = cliconfig.ANNOTATIONS_DIRECTORY
         utils.create_annotations_folder(annotations_folder_name)
 
         annotation_beats_path = utils.path_to_annotation_file(annotations_folder_name, self.song_name)

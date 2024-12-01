@@ -1,29 +1,81 @@
-# disable essentia logs
-import essentia
-from essentia.standard import MonoLoader
-# from essentia.standard import MonoLoader, MonoWriter
 from os.path import isdir
 import pyrubberband as pyrb
-# a = essentia.log
-# essentia.log.infoActive = False
-# essentia.log.warningActive = False
+import essentia
+# disable essentia logs
+essentia.log.infoActive = False 
+essentia.log.warningActive = False 
 
-def print_dict_table(dictionary, header_key=None, header_value=None, print_header=True):
-    len_total = 30 + 52
+from essentia.standard import MonoLoader, MonoWriter
+from essentia.standard import MusicExtractor, AudioOnsetsMarker, KeyExtractor, YamlOutput
+import cliconfig
+
+def save_music_extractor_results(song):
+    # from tempfile import TemporaryDirectory
+    # temp_dir = TemporaryDirectory()
+    results_file = f'music-extractor--{song.song_name}.json'
+    features, features_frames = MusicExtractor(lowlevelStats=['mean', 'stdev'],
+                                              rhythmStats=['mean', 'stdev'],
+                                              tonalStats=['mean', 'stdev'])(song.filepath)
+    YamlOutput(filename=results_file, format="json")(features)
+    return results_file    
+    
+def music_extractor(song):
+    features, features_frames = MusicExtractor(lowlevelStats=['mean', 'stdev'],
+                                              rhythmStats=['mean', 'stdev'],
+                                              tonalStats=['mean', 'stdev'])(song.filepath)
+    
+    bit_rate = int(features['metadata.audio_properties.bit_rate'])
+    duration_seconds = "{:.2f}".format( features['metadata.audio_properties.length'] )
+    replay_gain = "{:.2f}".format( features['metadata.audio_properties.replay_gain'] )
+    bpm = "{:.2f}".format( features['rhythm.bpm'] )
+    sample_rate = round(features['metadata.audio_properties.sample_rate'])
+    danceability = "{:.2f}/3.00".format( features['rhythm.danceability'])
+
+    result = {
+        "Filename": features['metadata.tags.file_name'],
+        "Duration": song.get_duration(),
+        "Duration (seconds)": duration_seconds,
+        "BPM": bpm,
+        "BPM (rounded)": round(features['rhythm.bpm']),
+        "Sample Rate": sample_rate,
+        "Danceability": danceability,
+        f"Key/Scale estimation (edma)     [conf.: {'{:.2f}'.format(features['tonal.key_edma.strength'])}]":      features['tonal.key_edma.key'] + ' ' + features['tonal.key_edma.scale'],
+        f"Key/Scale estimation (krumhansl)[conf.: {'{:.2f}'.format(features['tonal.key_krumhansl.strength'])}]": features['tonal.key_krumhansl.key'] + ' ' + features['tonal.key_krumhansl.scale'],
+        f"Key/Scale estimation (temperley)[conf.: {'{:.2f}'.format(features['tonal.key_temperley.strength'])}]": features['tonal.key_temperley.key'] + ' ' + features['tonal.key_temperley.scale'],
+        "Replay gain": replay_gain,
+        "Audio bit rate": round(bit_rate),
+        "Audio codec": features['metadata.audio_properties.codec'],
+        "Number of channels (mono or stereo)": int(features['metadata.audio_properties.number_channels']),
+        # "EBU128 integrated loudness": '{:.2f}'.format(features['lowlevel.loudness_ebu128.integrated']),
+        # "EBU128 loudness range": '{:.2f}'.format(features['lowlevel.loudness_ebu128.loudness_range']),
+        "MD5 hash for the encoded audio": features['metadata.audio_properties.md5_encoded'],
+
+        
+    }
+    # print(a)
+    print_dict_as_table(result, header_key="Extractor Attribute", header_value="Value")
+    return result 
+
+
+def mark_downbeats_and_save(song):
+    pass
+
+def print_dict_as_table(dictionary, header_key=None, header_value=None, print_header=True):
+    len_total = 50 + 62
     do_print_headers = print_header and (header_key and header_value)
-
+    # print()
     if do_print_headers:
-        key_str = header_key[:30]
-        value_str = header_value[:52]
-        print('{0: <30} {1: <52}'.format(key_str,value_str))
-        # print("-" * (len_total+1))  # Separator line
+        key_str = header_key[:50]
+        value_str = header_value[:62]
+        print('{0: <50} {1: <62}'.format(key_str,value_str))
+        print("-" * (len_total+1))  # Separator line
         
     # Print each key-value pair
     for key, value in dictionary.items():
         # Use str() to convert both key and value to strings
         # Truncate or pad to exact widths
-        formatted_key = str(key)[:30].ljust(30)
-        formatted_value = str(value)[:52].ljust(52)
+        formatted_key = str(key)[:50].ljust(50)
+        formatted_value = str(value)[:62].ljust(62)
         print(f"{formatted_key} {formatted_value}")
 
 def time_stretch(audio, factor, sample_rate=44100):
@@ -39,12 +91,18 @@ def save_audio(audio, filename, file_format='wav', bit_rate=320):
     MonoWriter(filename=filename, bitrate=bit_rate, format=file_format)(audio)
 
 
-def does_annotations_folder_exist(folder_name='pycrossfade_annotations'):
+
+def does_annotations_folder_exist(folder_name=False):
+    if not folder_name:
+        folder_name = cliconfig.ANNOTATIONS_DIRECTORY
     return isdir(folder_name)
 
 
-def create_annotations_folder(folder_name='pycrossfade_annotations'):
+def create_annotations_folder(folder_name=False):
+    
     from os import mkdir
+    if not folder_name:
+        folder_name = cliconfig.ANNOTATIONS_DIRECTORY
     if not does_annotations_folder_exist(folder_name):
         mkdir(folder_name)
         return True

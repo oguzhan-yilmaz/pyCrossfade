@@ -1,13 +1,19 @@
 # Use an official Python runtime as a parent image
-FROM python:3.8-bookworm
+FROM debian:bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /app
 
-RUN apt update -y \
-    && apt install -y libsndfile1 rubberband-cli ffmpeg \
-    && apt autoremove -y 
+# install essentia dependencies: https://essentia.upf.edu/installing.html
+RUN apt-get update -y \
+    && apt-get install -y build-essential libeigen3-dev libyaml-dev libfftw3-dev libavcodec-dev libavformat-dev libavutil-dev libswresample-dev libsamplerate0-dev libtag1-dev libchromaprint-dev \
+    && apt-get autoremove -y 
+
+
+# install pyCrossfade dependencies
+RUN apt-get install -y libsndfile1 rubberband-cli ffmpeg \
+    && apt-get autoremove -y 
 
 
 # i know this is ugly but its the only configuration that works

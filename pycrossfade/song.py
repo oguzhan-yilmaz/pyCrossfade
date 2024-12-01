@@ -12,12 +12,29 @@ class Song():
         self.beats = None
         self.downbeats = None
         self.duration_seconds = None
+        self.attributes = {}
         
         if filepath is not None:
             self.song_name, self.song_format = self.get_song_name_and_format()
             self.load_song_audio()
             self.load_beats()
+            self.populate_attributes()
 
+
+    def print_attribute_table(self):
+        
+        utils.print_dict_table(self.attributes, header_key="Attribute", header_value="Value", print_header=True)
+
+    def populate_attributes(self):
+        self.attributes = {
+            "Name": self.song_name,
+            "Format": self.song_format,
+            "Downbeats": len(self.get_downbeats()),
+            "Duration": self.get_duration(),
+            "DurationSeconds": int(self.duration_seconds),
+            "SampleRate": self.sample_rate,
+            "File": self.filepath
+        }
     def __str__(self):
         return f"{self.song_name}.{self.song_format} :: {self.filepath}"
     #def plot_downbeats(self, start_dbeat, end_dbeat, plot_name='', color='red'):
@@ -38,7 +55,8 @@ class Song():
         
     def load_song_audio(self):
         self.audio = utils.load_audio(self.filepath)
-        self.duration_seconds = len(self.audio) / self.sample_rate
+        au =self.audio
+        self.duration_seconds = self.audio.size / self.sample_rate
     
     def get_song_name_and_format(self):
         # returns ../song_name.song_format -> song_name and song_format

@@ -1,5 +1,6 @@
 import typer
 from song import Song
+from utils import print_dict_table
 
 
 app = typer.Typer(
@@ -14,11 +15,9 @@ app = typer.Typer(
 def parse_song(filepath: str):
     print(f"filepath={filepath}")
     s = Song(filepath)
-    print(f"downbeats len: {len(s.get_downbeats())}")
-    print()
+    s.print_attribute_table()
 
-    print(f'Song duration {s.get_duration()}')
-    print(f"beats len: {len(s.beats)}")
+    
     
 @app.command()
 def list_songs(filepath: str):
@@ -30,3 +29,6 @@ def main(name: str):
 
 if __name__ == "__main__":
     app()
+
+
+

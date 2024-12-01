@@ -1,21 +1,45 @@
+# disable essentia logs
+import essentia
+from essentia.standard import MonoLoader
+# from essentia.standard import MonoLoader, MonoWriter
+from os.path import isdir
+import pyrubberband as pyrb
+# a = essentia.log
+# essentia.log.infoActive = False
+# essentia.log.warningActive = False
+
+def print_dict_table(dictionary, header_key=None, header_value=None, print_header=True):
+    len_total = 30 + 52
+    do_print_headers = print_header and (header_key and header_value)
+
+    if do_print_headers:
+        key_str = header_key[:30]
+        value_str = header_value[:52]
+        print('{0: <30} {1: <52}'.format(key_str,value_str))
+        # print("-" * (len_total+1))  # Separator line
+        
+    # Print each key-value pair
+    for key, value in dictionary.items():
+        # Use str() to convert both key and value to strings
+        # Truncate or pad to exact widths
+        formatted_key = str(key)[:30].ljust(30)
+        formatted_value = str(value)[:52].ljust(52)
+        print(f"{formatted_key} {formatted_value}")
+
 def time_stretch(audio, factor, sample_rate=44100):
-    import pyrubberband as pyrb
     return pyrb.time_stretch(audio, sample_rate, factor)
 
 
 def load_audio(filepath):
     # returns loaded mono audio.
-    from essentia.standard import MonoLoader
     return MonoLoader(filename=filepath)()
 
 
 def save_audio(audio, filename, file_format='wav', bit_rate=320):
-    from essentia.standard import MonoWriter
     MonoWriter(filename=filename, bitrate=bit_rate, format=file_format)(audio)
 
 
 def does_annotations_folder_exist(folder_name='pycrossfade_annotations'):
-    from os.path import isdir
     return isdir(folder_name)
 
 

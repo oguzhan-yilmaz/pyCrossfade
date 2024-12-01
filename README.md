@@ -22,6 +22,11 @@ brew install libsndfile ffmpeg rubberband
 
 ### Python Dependencies
 
+#### Python Version
+
+`madmom` package supports up to python 3.8, it's recommended to is this version. 
+
+
 #### Installation
 
 To install the projects dependencies run:

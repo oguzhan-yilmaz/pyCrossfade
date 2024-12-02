@@ -25,6 +25,7 @@ class Song():
 
     def populate_attributes(self):
         self.attributes = {
+            "File": self.filepath,
             "Name": self.song_name,
             "Format": self.song_format,
             "Downbeats/Bars": len(self.get_downbeats()),
@@ -32,7 +33,6 @@ class Song():
             "Duration": self.get_duration(),
             "DurationSeconds": int(self.duration_seconds),
             "SampleRate": self.sample_rate,
-            "File": self.filepath
         }
         
         

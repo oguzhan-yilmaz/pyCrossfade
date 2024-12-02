@@ -6,8 +6,55 @@ essentia.log.infoActive = False
 essentia.log.warningActive = False 
 
 from essentia.standard import MonoLoader, MonoWriter
-from essentia.standard import MusicExtractor, AudioOnsetsMarker, KeyExtractor, YamlOutput
+from essentia.standard import MusicExtractor, AudioOnsetsMarker, YamlOutput, RhythmExtractor2013
 import cliconfig
+from pprint import pprint
+import numpy as np
+
+def onset_mark_at_indices(audio, indices,sample_rate=44100):
+    marked_audio = None
+    for idx in indices:
+        marked_audio = add_beep_to_audio(audio, idx, beep_duration=0.03, beep_frequency=500, sample_rate=sample_rate)
+    return marked_audio
+
+def onset_mark_downbeats(song):
+    dbeats = song.get_downbeats()
+    return onset_mark_at_indices(song.audio, dbeats)
+
+def add_beep_to_audio(audio, beep_index, beep_duration=0.1, beep_frequency=1000, sample_rate=44100):
+    """
+    Add a beep sound to an existing audio array at a specific index.
+    
+    Parameters:
+    - audio: Input audio numpy array
+    - beep_index: Index where the beep should start
+    - beep_duration: Duration of the beep in seconds (default 0.1s)
+    - beep_frequency: Frequency of the beep in Hz (default 1000 Hz)
+    - sample_rate: Audio sample rate (default 44100 Hz)
+    
+    Returns:
+    - Modified audio array with beep added
+    """
+    # Create time array for the beep
+    t = np.linspace(0, beep_duration, 
+                    int(beep_duration * sample_rate), 
+                    endpoint=False)
+    
+    # Generate sine wave for the beep
+    beep = np.sin(2 * np.pi * beep_frequency * t)
+    
+    # Ensure beep doesn't exceed original audio length
+    if beep_index + len(beep) > len(audio):
+        beep = beep[:len(audio) - beep_index]
+    
+    # # Create a copy of the original audio to modify
+    # modified_audio = audio.copy()
+    
+    # Add the beep to the audio at the specified index
+    audio[beep_index:beep_index+len(beep)] += beep
+    
+    return audio
+
 
 def save_music_extractor_results(song):
     # from tempfile import TemporaryDirectory
@@ -18,7 +65,7 @@ def save_music_extractor_results(song):
                                               tonalStats=['mean', 'stdev'])(song.filepath)
     YamlOutput(filename=results_file, format="json")(features)
     return results_file    
-    
+
 def music_extractor(song):
     features, features_frames = MusicExtractor(lowlevelStats=['mean', 'stdev'],
                                               rhythmStats=['mean', 'stdev'],

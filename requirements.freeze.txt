@@ -1,7 +1,7 @@
 asn1crypto==0.24.0
 cffi==1.15.1
 click==8.1.7
-cryptography==2.6.1
+cryptography==44.0.0
 Cython==0.29.36
 entrypoints==0.3
 essentia==2.1b6.dev374

@@ -63,6 +63,7 @@ def save_music_extractor_results(song):
     features, features_frames = MusicExtractor(lowlevelStats=['mean', 'stdev'],
                                               rhythmStats=['mean', 'stdev'],
                                               tonalStats=['mean', 'stdev'])(song.filepath)
+    features
     YamlOutput(filename=results_file, format="json")(features)
     return results_file    
 

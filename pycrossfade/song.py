@@ -70,7 +70,6 @@ class Song():
         
     def load_song_audio(self):
         self.audio = utils.load_audio(self.filepath)
-        au =self.audio
         self.duration_seconds = self.audio.size / self.sample_rate
     
     def get_song_name_and_format(self):

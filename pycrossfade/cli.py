@@ -6,7 +6,6 @@ from typing_extensions import Annotated, Optional, List
 import numpy as np 
 import transition
 from pprint import pprint
-
 app = typer.Typer(
     no_args_is_help=True,
 )
@@ -35,6 +34,22 @@ def crossfade(
     # s.print_attribute_table()
     # print(master_song)
     # print(slave_song)
+    ## ----------- DEBUG -----------------
+    # cc = crossfade['slave_remaining_song'].audio[:441000]
+    # tsa = crossfade['time_stretch_audio']
+    # cfa = crossfade['crossfade_part_audio']
+    # utils.save_audio(cc, 'cf-tests/slave_remaining_song.mp3')
+    # utils.save_audio(np.concatenate([tsa, cfa]), 'cf-tests/tsa_cfa.mp3')
+    # bb = np.concatenate([cfa, cc])
+    # utils.save_audio(utils.onset_mark_at_indices(bb, (len(cfa),)), 'cf-tests/cfa_slave_rem.mp3')
+    # remaining_s_marked = utils.onset_mark_downbeats(crossfade['slave_remaining_song'])
+    # utils.save_audio(remaining_s_marked[:44100*20], 'cf-tests/marked_slave_rem.mp3')
+    # s_marked = utils.onset_mark_downbeats(slave_song)
+    
+    # utils.save_audio(s_marked[:44100*20], 'cf-tests/marked_slave_full.mp3')
+    ## ----------- DEBUG -----------------
+
+    crossfade
     if not output:
         output = f"crossfade-{master_song.song_name}---{slave_song.song_name}.wav"
         
@@ -62,7 +77,7 @@ def crossfade_many(
     output_audio = transition.crossfade_multiple(song_list, len_crossfade=len_crossfade, len_time_stretch=len_time_stretch)
     
     if not output:
-        output = f"crossfadeM-{'-'.join(s.song_name for s in song_list)}.wav"
+        output = f"crossfadeMany-{'-'.join(s.song_name for s in song_list)}.wav"
     utils.save_audio(output_audio, output)
     
 @app.command()

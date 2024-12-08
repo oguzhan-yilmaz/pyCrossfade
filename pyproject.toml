@@ -8,7 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.9,<3.13"
 Cython = "^3.0.3"
-numpy = "^1.26.0"
+numpy = "^1.22.0"
 pyrubberband = "^0.3.0"
 essentia = "2.1b6.dev0"
 yodel = "^0.3.0"

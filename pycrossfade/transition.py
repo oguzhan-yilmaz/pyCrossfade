@@ -7,10 +7,11 @@ from song import Song
 def time_stretch_gradually_in_downbeats(song, final_factor):
     # Since we are time stretching *in-between* down beats, dbeat array has to
     # include the +1 dbeat in itself
+    audio = song.audio
+
     if final_factor == 1:
         return audio
 
-    audio = song.audio
     dbeats = song.get_downbeats()
 
     ts_factor_step_len = (final_factor - 1.0) / (len(dbeats) - 1)
@@ -233,11 +234,8 @@ def crossfade(master_song, slave_song, len_crossfade, len_time_stretch):
 def crossfade_multiple(song_list, len_crossfade, len_time_stretch):
     assert len(song_list) >= 3
 
-    master_song, slave_song, *other_songs = song_list
 
-    cf = None
     output_list = []
-    new_master = None
     mark_indices = []
     def append_to_output(part):
         output_list.append(part)
@@ -245,53 +243,31 @@ def crossfade_multiple(song_list, len_crossfade, len_time_stretch):
         for _ in output_list:
             a+=len(_)   
         mark_indices.append(a)
+        
+    master_song, slave_song, *other_songs = song_list
+        
     cf = crossfade(master_song, slave_song, len_crossfade, len_time_stretch)
     
     append_to_output(cf['master_initial_audio'])
     append_to_output(cf['time_stretch_audio'])
     append_to_output(cf['crossfade_part_audio'])
 
-
-
     next_master_song = cf['slave_remaining_song']
-    next_slave_song, *other_songs = other_songs
-    
-    next_cf = crossfade(next_master_song, next_slave_song, len_crossfade, len_time_stretch)
+    next_cf = None
+    for next_slave_song in other_songs:
+        next_cf = crossfade(next_master_song, next_slave_song, len_crossfade, len_time_stretch)
 
-    append_to_output(next_cf['master_initial_audio'])
-    append_to_output(next_cf['time_stretch_audio'])
-    append_to_output(next_cf['crossfade_part_audio'])
+        append_to_output(next_cf['master_initial_audio'])
+        append_to_output(next_cf['time_stretch_audio'])
+        append_to_output(next_cf['crossfade_part_audio'])
+        
+        next_master_song = next_cf['slave_remaining_song']
 
-    if not other_songs:
-        append_to_output(next_cf['slave_remaining_audio'])
+    append_to_output(next_cf['slave_remaining_audio'])
 
     full_audio = np.concatenate(output_list)
 
-    save_audio(onset_mark_at_indices(full_audio, mark_indices), 'cf-tests/full-many.mp3')
-    np
-    # for i in range(2,len(song_list) - 1):
-    #     slave_song = song_list[i]
-
-    #     new_master
-    #     # if i == 0:
-    #     #     # if its the first song on the list
-    #     #     master_p_audio_start_idx = 0
-    #     #     master_p_audio_end_idx = cf['ts_start_idx']
-
-    #     # else:
-    #     #     # if its not
-    #     #     master_p_audio_start_idx = cf_before['slave_fadein_end_idx']
-    #     #     master_p_audio_end_idx = cf['ts_start_idx']
-
-    #     master_audio = master_song.audio
-    #     output_list.append(master_audio[master_p_audio_start_idx:master_p_audio_end_idx])
-    #     output_list.append(cf['time_stretch_audio'])
-    #     output_list.append(cf['crossfade_audio'])
-
-
-
-    # adding the last part
-    last_slave_audio = new_master_song.audio
-    output_list.append(last_slave_audio)
-    save_audio(np.concatenate(output_list), 'test2.wav')
-    return np.concatenate(output_list)
+    return {
+        "full_transition": full_audio,
+        "transition_indices": mark_indices
+    }    

@@ -56,16 +56,16 @@ def add_beep_to_audio(audio, beep_index, beep_duration=0.1, beep_frequency=1000,
     return audio
 
 
-def save_music_extractor_results(song):
-    # from tempfile import TemporaryDirectory
-    # temp_dir = TemporaryDirectory()
-    results_file = f'music-extractor--{song.song_name}.json'
-    features, features_frames = MusicExtractor(lowlevelStats=['mean', 'stdev'],
-                                              rhythmStats=['mean', 'stdev'],
-                                              tonalStats=['mean', 'stdev'])(song.filepath)
-    features
-    YamlOutput(filename=results_file, format="json")(features)
-    return results_file    
+# def save_music_extractor_results(song):
+#     # from tempfile import TemporaryDirectory
+#     # temp_dir = TemporaryDirectory()
+#     results_file = f'music-extractor--{song.song_name}.json'
+#     features, features_frames = MusicExtractor(lowlevelStats=['mean', 'stdev'],
+#                                               rhythmStats=['mean', 'stdev'],
+#                                               tonalStats=['mean', 'stdev'])(song.filepath)
+#     features
+#     YamlOutput(filename=results_file, format="json")(features)
+#     return results_file    
 
 def music_extractor(song):
     features, features_frames = MusicExtractor(lowlevelStats=['mean', 'stdev'],
@@ -101,7 +101,6 @@ def music_extractor(song):
         
     }
     # print(a)
-    print_dict_as_table(result, header_key="Extractor Attribute", header_value="Value")
     return result 
 
 

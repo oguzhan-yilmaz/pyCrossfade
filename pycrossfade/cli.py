@@ -15,39 +15,22 @@ app = typer.Typer(
 
 
 
-@app.command()
+@app.command(no_args_is_help=True, short_help="Crossfade between two songs")
 def crossfade(
-        master_filepath: str,
-        slave_filepath: str,
-        len_crossfade: Annotated[ Optional[int], typer.Option('--len-crossfade', '-c')  ]=8,
-        len_time_stretch: Annotated[ Optional[int], typer.Option('--len-time-stretch', '-t')  ]=8,
-        output: Annotated[ Optional[str], typer.Option('--output', '-o') ] = "",
-        verbose: Annotated[ Optional[bool], typer.Option('--verbose', '-v') ] = False,
-        mark_transitions: Annotated[ Optional[bool], typer.Option('--mark-transitions', '-m') ] = False,
+        master_filepath: Annotated[str, typer.Argument(help="Filepath to Master song")],
+        slave_filepath: Annotated[str, typer.Argument(help="Filepath to Slave song")],
+        len_crossfade: Annotated[ Optional[int], typer.Option('--len-crossfade', '-c', help="Crossfade length in bars")  ]=8,
+        len_time_stretch: Annotated[ Optional[int], typer.Option('--len-time-stretch', '-t', help="Time-stretch length in bars")  ]=8,
+        output: Annotated[ Optional[str], typer.Option('--output', '-o', help="Save the output audio to") ] = "",
+        verbose: Annotated[ Optional[bool], typer.Option('--verbose', '-v',help="Print details about the crossfade") ] = False,
+        mark_transitions: Annotated[ Optional[bool], typer.Option('--mark-transitions',help="Play a beep sound at time-stretch, crossfade, and slave starts") ] = False,
     ):
     # print(f"filepath={filepath}")
-    print("> Processing master audio...")
+    # print("> Processing master audio...")
     master_song = Song(master_filepath)
-    print("> Processing slave audio...")
+    # print("> Processing slave audio...")
     slave_song = Song(slave_filepath)
     crossfade = transition.crossfade(master_song, slave_song, len_crossfade=len_crossfade, len_time_stretch=len_time_stretch)
-    # s.print_attribute_table()
-    # print(master_song)
-    # print(slave_song)
-    ## ----------- DEBUG -----------------
-    # cc = crossfade['slave_remaining_song'].audio[:441000]
-    # tsa = crossfade['time_stretch_audio']
-    # cfa = crossfade['crossfade_part_audio']
-    # utils.save_audio(cc, 'cf-tests/slave_remaining_song.mp3')
-    # utils.save_audio(np.concatenate([tsa, cfa]), 'cf-tests/tsa_cfa.mp3')
-    # bb = np.concatenate([cfa, cc])
-    # utils.save_audio(utils.onset_mark_at_indices(bb, (len(cfa),)), 'cf-tests/cfa_slave_rem.mp3')
-    # remaining_s_marked = utils.onset_mark_downbeats(crossfade['slave_remaining_song'])
-    # utils.save_audio(remaining_s_marked[:44100*20], 'cf-tests/marked_slave_rem.mp3')
-    # s_marked = utils.onset_mark_downbeats(slave_song)
-    
-    # utils.save_audio(s_marked[:44100*20], 'cf-tests/marked_slave_full.mp3')
-    ## ----------- DEBUG -----------------
 
     crossfade
     if not output:
@@ -60,28 +43,57 @@ def crossfade(
     utils.save_audio(audio, output)
     if verbose:
         crossfade['saved_file'] = output
+        crossfade.pop('slave_remaining_song')
+        crossfade.pop('time_stretch_audio')
+        crossfade.pop('crossfade_part_audio')
+        crossfade.pop('audio')
+        crossfade.pop('slave_remaining_audio')
+        crossfade.pop('master_initial_audio')
         utils.print_dict_as_table(crossfade)
     else:
-        print("Crossfade saved to {output}")
+        print(f"Crossfade saved to {output}")
 
-@app.command()
+@app.command(no_args_is_help=True, short_help="Crossfade between min. of 3 songs")
 def crossfade_many(
-        song_filepaths: List[str],
-        len_crossfade: Annotated[ Optional[int], typer.Option('--len-crossfade', '-c')  ]=8,
-        len_time_stretch: Annotated[ Optional[int], typer.Option('--len-time-stretch', '-t')  ]=8,
-        output: Annotated[ Optional[str], typer.Option('--output', '-o') ] = ""
+        song_filepaths: Annotated[  List[str], typer.Argument(help="Songs filepaths [Min 3] (seperated by spaces)")],
+        len_crossfade: Annotated[ Optional[int], typer.Option('--len-crossfade', '-c',help="Crossfade length in bars")]=8,
+        len_time_stretch: Annotated[ Optional[int], typer.Option('--len-time-stretch', '-t',help="Time-stretch length in bars")]=8,
+        output: Annotated[ Optional[str], typer.Option('--output', '-o', help="Save the output audio to (song.wav)") ] = "",
+        verbose: Annotated[ Optional[bool], typer.Option('--verbose', '-v',help="Print details about the crossfade") ] = False,
+        mark_transitions: Annotated[ Optional[bool], typer.Option('--mark-transitions',help="Play a beep sound at time-stretch, crossfade, and slave starts") ] = False,
     ):
     # print(f"filepath={filepath}")
     song_list = [Song(filepath)  for filepath in song_filepaths]
     
-    output_audio = transition.crossfade_multiple(song_list, len_crossfade=len_crossfade, len_time_stretch=len_time_stretch)
+    multi_transition = transition.crossfade_multiple(song_list, len_crossfade=len_crossfade, len_time_stretch=len_time_stretch)
+    
+    output_audio = multi_transition['full_transition']
+      
+    if mark_transitions:
+        output_audio = utils.onset_mark_at_indices(output_audio, multi_transition['transition_indices'])
     
     if not output:
         output = f"crossfadeMany-{'-'.join(s.song_name for s in song_list)}.wav"
-    utils.save_audio(output_audio, output)
     
-@app.command()
-def song(filepath: str):
+    utils.save_audio(output_audio, output)
+
+    if verbose:
+        print('--verbose option is still in development. Please open an issue.')
+        def group_by_three(lst):
+            return [lst[i:i+3] for i in range(0, len(lst), 3)]
+
+        transitions_grouped = multi_transition['transition_indices'][:-1]
+        last_crossfade_ends = multi_transition['transition_indices'][-1]
+        assert len(transitions_grouped)%3==0
+        
+        transition_g = group_by_three(transitions_grouped)
+        utils.print_dict_as_table({
+        })
+        
+    
+    
+@app.command(no_args_is_help=True, short_help="Process song and print metadata")
+def song(filepath: Annotated[str, typer.Argument(help="Filepath to song")]):
     # print(f"filepath={filepath}")
     print("> Processing audio...")
     s = Song(filepath)
@@ -89,59 +101,50 @@ def song(filepath: str):
     s.print_attribute_table()
 
 
-@app.command()
+@app.command(no_args_is_help=True, short_help="Extract BPM, ReplayGain, Key/Scale etc.")
 def extract(
-        filepath: str, 
-        save_to_file: Annotated[
-            Optional[bool], typer.Option('--save', '-s', prompt="Do you want to save the resulting json of Essentia Music Extractor?") 
-        ] = False,
+        filepath: Annotated[str, typer.Argument(help="Filepath to song")], 
+        # output: Annotated[Optional[bool], typer.Option('--output', '-o')] = False,
     ):
     # print(f"filepath={filepath}")
     print("> Processing audio...")
     s = Song(filepath)
     print("> Audio loaded!")
     print("> Starting Essentia Music Extractor...")
-    s.extract(save_to_file)
+    s.extract()
 
-@app.command()
+@app.command(no_args_is_help=True, short_help="Play a beep sound on each downbeat")
 def mark_downbeats(
-        filepath: str, 
-        output: Annotated[
-            Optional[str], typer.Option('--output', '-o') 
-        ] = "",
+        filepath: Annotated[str, typer.Argument(help="Filepath to song")], 
+        output: Annotated[Optional[str], typer.Option('--output', '-o')] = "",
     ):
     s = Song(filepath)
     if not output:
-        output = f"{s.song_name}--marked-downbeats.mp3"
+        output = f"{s.song_name}--marked-downbeats.wav"
     marked_audio = utils.onset_mark_downbeats(s)
-    
-    # save_audio(marked_audio, save_file_to, file_format=song.file_format)
     utils.save_audio(marked_audio, output)
-
     print(f"Song marked downbeats saved to: {output}")
 
-@app.command()
+@app.command(no_args_is_help=True, short_help="Cut a song between two downbeats", help="Example usage: cut-song /path/to/song.mp3 20 50")
 def cut_song(
-        filepath: str, 
-        from_bar: int,
-        to_bar: int,
-        output: Annotated[
-            Optional[str], typer.Option('--output', '-o') 
-        ] = "",
+        filepath: Annotated[str, typer.Argument(help="Filepath to song")], 
+        from_downbeat: Annotated[int, typer.Argument(help="Downbeat(bar) to start to cut from")],
+        to_downbeat: Annotated[int, typer.Argument(help="Downbeat(bar) to end to cut to")],
+        output: Annotated[Optional[str], typer.Option('--output', '-o')] = "",
     ):
     
-    assert from_bar < to_bar
+    assert from_downbeat < to_downbeat
     
     s = Song(filepath)
     dbeats = s.get_downbeats()
 
     if not output:
-        output = f"{s.song_name}--{from_bar}-{to_bar}.{s.song_format}"
+        output = f"{s.song_name}--{from_downbeat}-{to_downbeat}.{s.song_format}"
     
-    cut = s.audio[dbeats[from_bar]:dbeats[to_bar]]
-    utils.save_audio(cut, output)
+    cut_song = transition.crop_audio_and_dbeats(s, from_downbeat, to_downbeat)
+    utils.save_audio(cut_song.audio, output)
 
-    print(f"Song cut between downbeats {from_bar}:{to_bar}/{len(dbeats)} to: {output}")
+    print(f"Song cut between downbeats {from_downbeat}:{to_downbeat}/{len(dbeats)} to: {output}")
     
 
 if __name__ == "__main__":

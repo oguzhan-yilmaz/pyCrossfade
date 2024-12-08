@@ -36,14 +36,10 @@ class Song():
         }
         
         
-    def extract(self, save_result=True):
-        if save_result:
-            result_filepath = utils.save_music_extractor_results(self)
-            print(f"> Essentia MusicExtractor results saved to: {result_filepath}.")
-            print()
-            
-        utils.music_extractor(self)
-
+    def extract(self):
+        result = utils.music_extractor(self)
+        utils.print_dict_as_table(result, header_key="Extractor Attribute", header_value="Value")
+        
 
     def print_attribute_table(self, print_header=True):
         utils.print_dict_as_table(self.attributes, header_key="Attribute", header_value="Value", print_header=print_header)

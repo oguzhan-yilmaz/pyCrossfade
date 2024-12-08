@@ -15,7 +15,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: pycrossfade
+  IMAGE_NAME: oguzhan-yilmaz/pyCrossfade
 
 jobs:
   build-and-push-pycrossfade-docker-image:

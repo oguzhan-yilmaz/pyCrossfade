@@ -2,7 +2,7 @@ import numpy as np
 import madmom 
 import utils
 import os
-import cliconfig
+import config
 
 
 class Song():
@@ -93,7 +93,7 @@ class Song():
         return self.downbeats
 
     def load_beats(self):
-        annotations_folder_name = cliconfig.ANNOTATIONS_DIRECTORY
+        annotations_folder_name = config.ANNOTATIONS_DIRECTORY
         utils.create_annotations_folder(annotations_folder_name)
 
         annotation_beats_path = utils.path_to_annotation_file(annotations_folder_name, self.song_name)

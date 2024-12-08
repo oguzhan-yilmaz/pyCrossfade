@@ -7,7 +7,7 @@ essentia.log.warningActive = False
 
 from essentia.standard import MonoLoader, MonoWriter
 from essentia.standard import MusicExtractor, AudioOnsetsMarker, YamlOutput, RhythmExtractor2013
-import cliconfig
+import config
 from pprint import pprint
 import numpy as np
 
@@ -141,7 +141,7 @@ def save_audio(audio, filename, file_format='wav', bit_rate=320):
 
 def does_annotations_folder_exist(folder_name=False):
     if not folder_name:
-        folder_name = cliconfig.ANNOTATIONS_DIRECTORY
+        folder_name = config.ANNOTATIONS_DIRECTORY
     return isdir(folder_name)
 
 
@@ -149,7 +149,7 @@ def create_annotations_folder(folder_name=False):
     
     from os import mkdir
     if not folder_name:
-        folder_name = cliconfig.ANNOTATIONS_DIRECTORY
+        folder_name = config.ANNOTATIONS_DIRECTORY
     if not does_annotations_folder_exist(folder_name):
         mkdir(folder_name)
         return True

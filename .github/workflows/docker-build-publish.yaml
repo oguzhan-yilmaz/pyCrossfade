@@ -18,7 +18,7 @@ env:
   IMAGE_NAME: pycrossfade
 
 jobs:
-  build-and-push-balcony-docker-image:
+  build-and-push-pycrossfade-docker-image:
     runs-on: ubuntu-latest
     permissions:
       contents: read

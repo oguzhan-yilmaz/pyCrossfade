@@ -1,39 +1,17 @@
 import numpy as np
-from .utils import *
-from .song import Song
+from utils import *
+from song import Song
 
-def crop_audio_and_dbeats(song, start_dbeat, end_dbeat):
-    audio = song.audio
-    song_dbeats = song.get_downbeats()
-    len_dbeats = len(song_dbeats)
-
-    # Supporting negative indexing
-    if start_dbeat < 0:
-        start_dbeat = len_dbeats + start_dbeat
-    if end_dbeat < 0:
-        end_dbeat = len_dbeats + end_dbeat
-
-    if start_dbeat >= len_dbeats or end_dbeat >= len_dbeats:  # or start_dbeat >= end_dbeat:
-        raise Exception(f"Given start_dbeat({start_dbeat}) and/or end_dbeat({end_dbeat}) are not compatible.")
-    
-    start_dbeat_value = song_dbeats[start_dbeat]
-    audio_start_idx, audio_end_idx = song_dbeats[start_dbeat], song_dbeats[end_dbeat]
-    cropped_audio = audio[audio_start_idx: audio_end_idx]
-    cropped_dbeats = song_dbeats[start_dbeat:end_dbeat] - start_dbeat_value
-
-    new_song = Song()
-    new_song.audio = cropped_audio
-    new_song.downbeats = cropped_dbeats
-    return new_song
 
 
 def time_stretch_gradually_in_downbeats(song, final_factor):
     # Since we are time stretching *in-between* down beats, dbeat array has to
     # include the +1 dbeat in itself
+    audio = song.audio
+
     if final_factor == 1:
         return audio
 
-    audio = song.audio
     dbeats = song.get_downbeats()
 
     ts_factor_step_len = (final_factor - 1.0) / (len(dbeats) - 1)
@@ -128,9 +106,31 @@ def beatmatch_to_slave(master_song, slave_song):
     return master_beatmatched_to_slave_audio, slave_audio
 
 
+def crop_audio_and_dbeats(song, start_dbeat, end_dbeat):
+    audio = song.audio
+    song_dbeats = song.get_downbeats()
+    len_dbeats = len(song_dbeats)
 
+    # Supporting negative indexing
+    if start_dbeat < 0:
+        start_dbeat = len_dbeats + start_dbeat
+    if end_dbeat < 0:
+        end_dbeat = len_dbeats + end_dbeat
 
-def crossfade(master_song, slave_song, len_crossfade, len_time_stretch, return_audio=True):
+    if start_dbeat >= len_dbeats or end_dbeat >= len_dbeats:  # or start_dbeat >= end_dbeat:
+        raise Exception(f"Given start_dbeat({start_dbeat}) and/or end_dbeat({end_dbeat}) are not compatible.")
+    
+    start_dbeat_value = song_dbeats[start_dbeat]
+    audio_start_idx, audio_end_idx = song_dbeats[start_dbeat], song_dbeats[end_dbeat]
+    cropped_audio = audio[audio_start_idx: audio_end_idx]
+    cropped_dbeats = song_dbeats[start_dbeat:end_dbeat] - start_dbeat_value
+
+    new_song = Song()
+    new_song.audio = cropped_audio
+    new_song.downbeats = cropped_dbeats
+    return new_song
+    
+def crossfade(master_song, slave_song, len_crossfade, len_time_stretch):
     # We are getting the required song partitions and their respective dbeats from SongPartition class
     master_p_audio = master_song.audio
     master_p_dbeats = master_song.get_downbeats()
@@ -188,60 +188,86 @@ def crossfade(master_song, slave_song, len_crossfade, len_time_stretch, return_a
     new_slave_fadedin = linear_fade_filter(new_slave_fadedin, 'low_shelf', start_volume=0.0, end_volume=1.0)
     new_slave_fadedin = linear_fade_filter(new_slave_fadedin, 'high_shelf', start_volume=0.0, end_volume=1.0)
 
-    crossfade_audio = new_slave_fadedin + new_master_fadedout
+    crossfade_part_audio = new_slave_fadedin + new_master_fadedout
 
     slave_fadein_end_idx = slave_p_dbeats[0] + len(new_slave_fadedin)
 
+    master_initial_audio = master_song.audio[:ts_start_idx]
 
-    if return_audio:
-        return np.concatenate([
-            master_song.audio[:ts_start_idx],
-            time_stretch_audio,
-            crossfade_audio,
-            slave_song.audio[slave_fadein_end_idx:]
-        ])
-    else:
-        return {'time_stretch_audio': time_stretch_audio,
-                'crossfade_audio': crossfade_audio,
-                'len_crossfade': len_crossfade,
-                'len_time_stretch': len_time_stretch,
-                'ts_start_idx': ts_start_idx,
-                'slave_fadein_end_idx': slave_fadein_end_idx}
+
+    crossfade_start_idx = ts_start_idx+time_stretch_audio.size
+    slave_start_idx = crossfade_start_idx+crossfade_part_audio.size       
+     
+    slave_remaining_song = crop_audio_and_dbeats(slave_fadein_song, slave_dbeats_end, -1)
+    slave_remaining_audio = slave_song.audio[slave_fadein_end_idx:]
+    resulted_audio = np.concatenate([
+        master_initial_audio,
+        time_stretch_audio,
+        crossfade_part_audio,
+        slave_remaining_audio
+    ])
+
+    return {
+        'master_initial_audio': master_song.audio[:ts_start_idx],
+        'slave_remaining_audio': slave_remaining_audio,
+        'slave_remaining_song': slave_remaining_song,
+        'audio': resulted_audio,
+        'time_stretch_audio': time_stretch_audio,
+        'crossfade_part_audio': crossfade_part_audio,
+
+        'slave_fadein_end_idx': slave_fadein_end_idx,
+        'time_stretch_start_idx': ts_start_idx,
+        'crossfade_start_idx': crossfade_start_idx,
+        'slave_start_idx': slave_start_idx,        
+
+        'time_stretch_start_seconds': ts_start_idx/44100,
+        'crossfade_start_seconds': crossfade_start_idx/44100,
+        'slave_start_seconds': slave_start_idx/44100,    
+        'slave_fadein_end_seconds': slave_fadein_end_idx/44100,
+
+        'len_crossfade': len_crossfade,
+        'len_time_stretch': len_time_stretch,
+    }
+
 
 
 def crossfade_multiple(song_list, len_crossfade, len_time_stretch):
-    import numpy as np
-    master_song = song_list[0]
-    slave_song = song_list[1]
+    assert len(song_list) >= 3
+
+
     output_list = []
+    mark_indices = []
+    def append_to_output(part):
+        output_list.append(part)
+        a= 0
+        for _ in output_list:
+            a+=len(_)   
+        mark_indices.append(a)
+        
+    master_song, slave_song, *other_songs = song_list
+        
+    cf = crossfade(master_song, slave_song, len_crossfade, len_time_stretch)
+    
+    append_to_output(cf['master_initial_audio'])
+    append_to_output(cf['time_stretch_audio'])
+    append_to_output(cf['crossfade_part_audio'])
 
-    # crossfade and crossfade-before
-    cf_before = None
-    cf = None
+    next_master_song = cf['slave_remaining_song']
+    next_cf = None
+    for next_slave_song in other_songs:
+        next_cf = crossfade(next_master_song, next_slave_song, len_crossfade, len_time_stretch)
 
-    # crossfade between partitions
-    for i in range(len(song_list) - 1):
-        master_song = song_list[i]
-        slave_song = song_list[i + 1]
-        cf_before = cf
-        cf = crossfade(master_song, slave_song, len_crossfade, len_time_stretch, return_audio=False)
+        append_to_output(next_cf['master_initial_audio'])
+        append_to_output(next_cf['time_stretch_audio'])
+        append_to_output(next_cf['crossfade_part_audio'])
+        
+        next_master_song = next_cf['slave_remaining_song']
 
-        if i == 0:
-            # if its the first song on the list
-            master_p_audio_start_idx = 0
-            master_p_audio_end_idx = cf['ts_start_idx']
+    append_to_output(next_cf['slave_remaining_audio'])
 
-        else:
-            # if its not
-            master_p_audio_start_idx = cf_before['slave_fadein_end_idx']
-            master_p_audio_end_idx = cf['ts_start_idx']
+    full_audio = np.concatenate(output_list)
 
-        master_audio = master_song.audio
-        output_list.append(master_audio[master_p_audio_start_idx:master_p_audio_end_idx])
-        output_list.append(cf['time_stretch_audio'])
-        output_list.append(cf['crossfade_audio'])
-
-    # adding the last part
-    slave_audio = slave_song.audio
-    output_list.append(slave_audio[cf['slave_fadein_end_idx']:])
-    return np.concatenate(output_list)
+    return {
+        "full_transition": full_audio,
+        "transition_indices": mark_indices
+    }    

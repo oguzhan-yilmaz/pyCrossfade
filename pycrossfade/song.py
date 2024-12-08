@@ -1,7 +1,8 @@
 import numpy as np
 import madmom 
-from . import utils
+import utils
 import os
+import config
 
 
 class Song():
@@ -11,12 +12,42 @@ class Song():
         self.sample_rate = 44100
         self.beats = None
         self.downbeats = None
-
+        self.duration_seconds = None
+        self.attributes = {}
+        
         if filepath is not None:
             self.song_name, self.song_format = self.get_song_name_and_format()
             self.load_song_audio()
             self.load_beats()
+            self.populate_attributes()
 
+
+
+    def populate_attributes(self):
+        self.attributes = {
+            "File": self.filepath,
+            "Name": self.song_name,
+            "Format": self.song_format,
+            "Downbeats/Bars": len(self.get_downbeats()),
+            "Beats": len(self.beats),
+            "Duration": self.get_duration(),
+            "DurationSeconds": int(self.duration_seconds),
+            "SampleRate": self.sample_rate,
+        }
+        
+        
+    def extract(self):
+        result = utils.music_extractor(self)
+        utils.print_dict_as_table(result, header_key="Extractor Attribute", header_value="Value")
+        
+
+    def print_attribute_table(self, print_header=True):
+        utils.print_dict_as_table(self.attributes, header_key="Attribute", header_value="Value", print_header=print_header)
+
+    def __str__(self):
+        return f"{self.song_name}.{self.song_format} :: {self.filepath}"
+    
+    
     #def plot_downbeats(self, start_dbeat, end_dbeat, plot_name='', color='red'):
     #    import matplotlib.pyplot as plt
     #    plt.rcParams['figure.figsize'] = (20, 9) 
@@ -30,10 +61,13 @@ class Song():
     #    plotname = ''.join(plot_name.split(' '))
     #    plt.savefig(f'{plotname}.png')
         
-
+    def get_duration(self):
+        return f'{int(self.duration_seconds//60)}:{round(self.duration_seconds%60)}'
+        
     def load_song_audio(self):
         self.audio = utils.load_audio(self.filepath)
-
+        self.duration_seconds = self.audio.size / self.sample_rate
+    
     def get_song_name_and_format(self):
         # returns ../song_name.song_format -> song_name and song_format
         return self.filepath.split('/')[-1].split('.')
@@ -59,7 +93,7 @@ class Song():
         return self.downbeats
 
     def load_beats(self):
-        annotations_folder_name = 'pycrossfade_annotations'
+        annotations_folder_name = config.ANNOTATIONS_DIRECTORY
         utils.create_annotations_folder(annotations_folder_name)
 
         annotation_beats_path = utils.path_to_annotation_file(annotations_folder_name, self.song_name)

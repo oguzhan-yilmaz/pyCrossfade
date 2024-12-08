@@ -9,31 +9,23 @@ pyCrossfade is born out of a personal effort to create a customizable and beat-m
 
 This project requires *libsndfile*, *rubberband-cli*, *ffmpeg* to be installed on the system to work.
 
-### Linux
 
 ```bash
 apt-get update && apt-get install -y libsndfile1 rubberband-cli ffmpeg
 ```
 
-### OSX
-
-
-##### libsndfile
 ```bash
-brew install libsndfile
-```
-##### ffmpeg
-```bash
-brew install ffmpeg
+brew install libsndfile ffmpeg rubberband
 ```
 
-##### rubberband
-```bash
-brew install rubberband
-```
 -----
 
 ### Python Dependencies
+
+#### Python Version
+
+`madmom` package supports up to python 3.8, it's recommended to is this version. 
+
 
 #### Installation
 
@@ -60,11 +52,11 @@ Installing `madmom` package alone, if `Cython` package is not installed before h
 
 ----
 ## Example Usage
+
 #### Transitioning Between Two Songs
+
 ```python
-from pycrossfade.song import Song
-from pycrossfade.transition import crossfade
-from pycrossfade.utils import save_audio
+from pycrossfade import Song, crossfade, save_audio
 # creating master and slave songs
 master_song = Song('/path/to/master_song.mp3')
 slave_song = Song('/path/to/slave_song.mp3')
@@ -77,9 +69,7 @@ save_audio(output_audio, '/path/to/save/mix.wav')
 #### Transitioning Between Multiple Songs
 
 ```python
-from pycrossfade.song import Song
-from pycrossfade.transition import crossfade_multiple
-from pycrossfade.utils import save_audio
+from pycrossfade import Song, crossfade_multiple, save_audio
 # creating songs
 song_list = [
   Song('/path/to/song_one.mp3'),
@@ -95,9 +85,7 @@ save_audio(output_audio, '/path/to/save/mix_multiple.wav')
 #### Transitioning Between Songs On Specific Bars
 
 ```python
-from pycrossfade.song import Song
-from pycrossfade.transition import crossfade_multiple, crop_audio_and_dbeats
-from pycrossfade.utils import save_audio
+from pycrossfade import Song, crossfade_multiple, crop_audio_and_dbeats, import save_audio
 # creating songs
 song_one = Song('/path/to/song_one.mp3')
 song_two = Song('/path/to/song_two.mp3')

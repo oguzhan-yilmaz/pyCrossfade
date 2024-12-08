@@ -1,8 +1,11 @@
 *.pyc
 pycrossfade_annotations/
 .vscode/
-Dockerfile
 docker-compose.yml
 main.py
 multiple_song_mix.wav
 output_multiple.wav
+*.mp3
+*.wav
+audios/
+music-extractor--*.json

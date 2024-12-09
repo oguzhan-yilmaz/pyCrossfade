@@ -5,6 +5,7 @@ import utils
 from typing_extensions import Annotated, Optional, List
 import numpy as np 
 import transition
+import config
 from pprint import pprint
 app = typer.Typer(
     no_args_is_help=True,
@@ -25,10 +26,15 @@ def crossfade(
         verbose: Annotated[ Optional[bool], typer.Option('--verbose', '-v',help="Print details about the crossfade") ] = False,
         mark_transitions: Annotated[ Optional[bool], typer.Option('--mark-transitions',help="Play a beep sound at time-stretch, crossfade, and slave starts") ] = False,
     ):
+    output = config.BASE_AUDIO_DIRECTORY+output
+    
     # print(f"filepath={filepath}")
     # print("> Processing master audio...")
+    master_filepath = config.BASE_AUDIO_DIRECTORY+master_filepath
     master_song = Song(master_filepath)
     # print("> Processing slave audio...")
+
+    slave_filepath = config.BASE_AUDIO_DIRECTORY+slave_filepath
     slave_song = Song(slave_filepath)
     crossfade = transition.crossfade(master_song, slave_song, len_crossfade=len_crossfade, len_time_stretch=len_time_stretch)
 
@@ -62,8 +68,10 @@ def crossfade_many(
         verbose: Annotated[ Optional[bool], typer.Option('--verbose', '-v',help="Print details about the crossfade") ] = False,
         mark_transitions: Annotated[ Optional[bool], typer.Option('--mark-transitions',help="Play a beep sound at time-stretch, crossfade, and slave starts") ] = False,
     ):
+    output = config.BASE_AUDIO_DIRECTORY+output
+
     # print(f"filepath={filepath}")
-    song_list = [Song(filepath)  for filepath in song_filepaths]
+    song_list = [Song(config.BASE_AUDIO_DIRECTORY+filepath)  for filepath in song_filepaths]
     
     multi_transition = transition.crossfade_multiple(song_list, len_crossfade=len_crossfade, len_time_stretch=len_time_stretch)
     
@@ -95,6 +103,8 @@ def crossfade_many(
 @app.command(no_args_is_help=True, short_help="Process song and print metadata")
 def song(filepath: Annotated[str, typer.Argument(help="Filepath to song")]):
     # print(f"filepath={filepath}")
+    filepath = config.BASE_AUDIO_DIRECTORY+filepath
+
     print("> Processing audio...")
     s = Song(filepath)
     print("> Audio loaded!")
@@ -106,6 +116,7 @@ def extract(
         filepath: Annotated[str, typer.Argument(help="Filepath to song")], 
         # output: Annotated[Optional[bool], typer.Option('--output', '-o')] = False,
     ):
+    filepath = config.BASE_AUDIO_DIRECTORY+filepath
     # print(f"filepath={filepath}")
     print("> Processing audio...")
     s = Song(filepath)
@@ -118,6 +129,8 @@ def mark_downbeats(
         filepath: Annotated[str, typer.Argument(help="Filepath to song")], 
         output: Annotated[Optional[str], typer.Option('--output', '-o')] = "",
     ):
+    filepath = config.BASE_AUDIO_DIRECTORY+filepath
+    output = config.BASE_AUDIO_DIRECTORY+output
     s = Song(filepath)
     if not output:
         output = f"{s.song_name}--marked-downbeats.wav"
@@ -134,7 +147,8 @@ def cut_song(
     ):
     
     assert from_downbeat < to_downbeat
-    
+    filepath = config.BASE_AUDIO_DIRECTORY+filepath
+    output = config.BASE_AUDIO_DIRECTORY+output
     s = Song(filepath)
     dbeats = s.get_downbeats()
 

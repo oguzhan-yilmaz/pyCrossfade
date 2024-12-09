@@ -20,8 +20,8 @@ app = typer.Typer(
 def crossfade(
         master_filepath: Annotated[str, typer.Argument(help="Filepath to Master song")],
         slave_filepath: Annotated[str, typer.Argument(help="Filepath to Slave song")],
-        len_crossfade: Annotated[ Optional[int], typer.Option('--len-crossfade', '-c', help="Crossfade length in bars")  ]=8,
         len_time_stretch: Annotated[ Optional[int], typer.Option('--len-time-stretch', '-t', help="Time-stretch length in bars")  ]=8,
+        len_crossfade: Annotated[ Optional[int], typer.Option('--len-crossfade', '-c', help="Crossfade length in bars")  ]=8,
         output: Annotated[ Optional[str], typer.Option('--output', '-o', help="Save the output audio to") ] = "",
         verbose: Annotated[ Optional[bool], typer.Option('--verbose', '-v',help="Print details about the crossfade") ] = False,
         mark_transitions: Annotated[ Optional[bool], typer.Option('--mark-transitions',help="Play a beep sound at time-stretch, crossfade, and slave starts") ] = False,
@@ -62,8 +62,8 @@ def crossfade(
 @app.command(no_args_is_help=True, short_help="Crossfade between min. of 3 songs")
 def crossfade_many(
         song_filepaths: Annotated[  List[str], typer.Argument(help="Songs filepaths [Min 3] (seperated by spaces)")],
-        len_crossfade: Annotated[ Optional[int], typer.Option('--len-crossfade', '-c',help="Crossfade length in bars")]=8,
         len_time_stretch: Annotated[ Optional[int], typer.Option('--len-time-stretch', '-t',help="Time-stretch length in bars")]=8,
+        len_crossfade: Annotated[ Optional[int], typer.Option('--len-crossfade', '-c',help="Crossfade length in bars")]=8,
         output: Annotated[ Optional[str], typer.Option('--output', '-o', help="Save the output audio to (song.wav)") ] = "",
         verbose: Annotated[ Optional[bool], typer.Option('--verbose', '-v',help="Print details about the crossfade") ] = False,
         mark_transitions: Annotated[ Optional[bool], typer.Option('--mark-transitions',help="Play a beep sound at time-stretch, crossfade, and slave starts") ] = False,

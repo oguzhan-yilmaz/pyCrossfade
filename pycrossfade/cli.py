@@ -26,7 +26,6 @@ def crossfade(
         verbose: Annotated[ Optional[bool], typer.Option('--verbose', '-v',help="Print details about the crossfade") ] = False,
         mark_transitions: Annotated[ Optional[bool], typer.Option('--mark-transitions',help="Play a beep sound at time-stretch, crossfade, and slave starts") ] = False,
     ):
-    output = config.BASE_AUDIO_DIRECTORY+output
     
     # print(f"filepath={filepath}")
     # print("> Processing master audio...")
@@ -41,7 +40,8 @@ def crossfade(
     crossfade
     if not output:
         output = f"crossfade-{master_song.song_name}---{slave_song.song_name}.wav"
-        
+    output = config.BASE_AUDIO_DIRECTORY+output
+
     audio = crossfade['audio']
     if mark_transitions:
         mark_indices = (crossfade['time_stretch_start_idx'],crossfade['crossfade_start_idx'],crossfade['slave_start_idx'])
@@ -68,7 +68,6 @@ def crossfade_many(
         verbose: Annotated[ Optional[bool], typer.Option('--verbose', '-v',help="Print details about the crossfade") ] = False,
         mark_transitions: Annotated[ Optional[bool], typer.Option('--mark-transitions',help="Play a beep sound at time-stretch, crossfade, and slave starts") ] = False,
     ):
-    output = config.BASE_AUDIO_DIRECTORY+output
 
     # print(f"filepath={filepath}")
     song_list = [Song(config.BASE_AUDIO_DIRECTORY+filepath)  for filepath in song_filepaths]
@@ -82,6 +81,7 @@ def crossfade_many(
     
     if not output:
         output = f"crossfadeMany-{'-'.join(s.song_name for s in song_list)}.wav"
+    output = config.BASE_AUDIO_DIRECTORY+output
     
     utils.save_audio(output_audio, output)
 
@@ -130,10 +130,11 @@ def mark_downbeats(
         output: Annotated[Optional[str], typer.Option('--output', '-o')] = "",
     ):
     filepath = config.BASE_AUDIO_DIRECTORY+filepath
-    output = config.BASE_AUDIO_DIRECTORY+output
     s = Song(filepath)
     if not output:
         output = f"{s.song_name}--marked-downbeats.wav"
+    output = config.BASE_AUDIO_DIRECTORY+output
+
     marked_audio = utils.onset_mark_downbeats(s)
     utils.save_audio(marked_audio, output)
     print(f"Song marked downbeats saved to: {output}")
@@ -154,6 +155,7 @@ def cut_song(
 
     if not output:
         output = f"{s.song_name}--{from_downbeat}-{to_downbeat}.{s.song_format}"
+    output = config.BASE_AUDIO_DIRECTORY+output
     
     cut_song = transition.crop_audio_and_dbeats(s, from_downbeat, to_downbeat)
     utils.save_audio(cut_song.audio, output)

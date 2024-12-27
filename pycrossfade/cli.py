@@ -149,7 +149,6 @@ def cut_song(
     
     assert from_downbeat < to_downbeat
     filepath = config.BASE_AUDIO_DIRECTORY+filepath
-    output = config.BASE_AUDIO_DIRECTORY+output
     s = Song(filepath)
     dbeats = s.get_downbeats()
 

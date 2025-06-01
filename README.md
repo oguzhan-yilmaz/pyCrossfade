@@ -121,7 +121,6 @@ pycrossfade crossfade --help
       --mark-transitions \
       --output my_crossfade.wav \
       horovel-cut-35-65.wav hypnotic-cut-35-65.wav
-    return array(a, dtype, copy=False, order=order)
   slave_fadein_end_idx                               708246
   time_stretch_start_idx                             1118817
   crossfade_start_idx                                1757824

@@ -36,7 +36,7 @@ Change the `MY_AUDIO_DIRECTORY` and add the following bash snippet to your `.bas
 PYCROSSFADE_DIR="$HOME/.pycrossfade"
 PYCROSSFADE_ANNOTATIONS_DIR="$PYCROSSFADE_DIR/annotations"
 
-MY_AUDIO_DIRECTORY="!!CHANGEME!!"
+MY_AUDIO_DIRECTORY="$HOME/CHANGE_ME"
 
 # create the alias command
 alias pycrossfade="mkdir -p $PYCROSSFADE_DIR \
@@ -64,13 +64,80 @@ pycrossfade crossfade --help
 ![pycrossfade CLI crossfade command help page](./assets/images/cli_crossfade_help_page.png)
 
 #### CLI Commands
-
-- `crossfade`: Crossfade between two songs
-- `crossfade-many`: Crossfade between min. of 3 songs
-- `song`: Process song and print metadata
+- `song`: Process song beats and print metadata
+  ```bash
+  $ pycrossfade song horovel.mp3
+  > Processing audio...
+  > Audio loaded!
+  Attribute             Value
+  File                  /app/audios/horovel.mp3
+  Name                  horovel
+  Format                mp3
+  Downbeats/Bars        136
+  Beats                 541
+  Duration              4:40
+  DurationSeconds       280
+  SampleRate            44100
+  ```
 - `extract`: Extract BPM, ReplayGain, Key/Scale etc.
-- `mark-downbeats`: Play a beep sound on each downbeat
+  ```bash
+  $ pycrossfade extract horovel.mp3
+  > Processing audio...
+  > Audio loaded!
+  > Starting Essentia Music Extractor...
+  Extractor Attribute                                Value
+  Filename                                           horovel.mp3
+  Duration                                           4:40
+  Duration (seconds)                                 280.08
+  BPM                                                122.90
+  BPM (rounded)                                      123
+  Sample Rate                                        44100
+  Danceability                                       1.44/3.00
+  Key/Scale estimation (edma)     [conf.: 0.65]      Eb minor
+  Key/Scale estimation (krumhansl)[conf.: 0.64]      Eb minor
+  Key/Scale estimation (temperley)[conf.: 0.63]      Eb minor
+  Replay gain                                        -10.46
+  Audio bit rate                                     128000
+  Audio codec                                        mp3
+  Number of channels (mono or stereo)                2
+  MD5 hash for the encoded audio                     49aefedacc94152fb761a238e01ec86a
+  ```
+- `mark-downbeats`: Play a beep sound on each downbeat 
+  ```bash
+  $ pycrossfade mark-downbeats -o horovel-marked-db.wav horovel.mp3
+  Song marked downbeats saved to: /app/audios/horovel-marked-db.wav
+  ``` 
 - `cut-song`: Cut a song between two downbeats
+  ```bash
+  $ pycrossfade cut-song horovel.mp3 35 65 -o horovel-cut-35-65.wav
+  Song cut between downbeats 35:65/136 to: /app/audios/horovel-cut-35-65.wav
+  ```
+- `crossfade`: Crossfade between two songs
+  ```bash
+  $ pycrossfade crossfade \
+      --verbose \
+      --len-time-stretch 8 \
+      --len-crossfade 8 \
+      --mark-transitions \
+      --output my_crossfade.wav \
+      horovel-cut-35-65.wav hypnotic-cut-35-65.wav
+    return array(a, dtype, copy=False, order=order)
+  slave_fadein_end_idx                               708246
+  time_stretch_start_idx                             1118817
+  crossfade_start_idx                                1757824
+  slave_start_idx                                    2424175
+  time_stretch_start_seconds                         25.37
+  crossfade_start_seconds                            39.85995464852608
+  slave_start_seconds                                54.96995464852608
+  slave_fadein_end_seconds                           16.06
+  len_crossfade                                      8
+  len_time_stretch                                   8
+  saved_file                                         /app/audios/my_crossfade.wav
+  ```
+- `crossfade-many`: Crossfade between min. of 3 songs
+
+
+
 
 ---
 

@@ -19,6 +19,8 @@ class Song():
         self.beat_settings = beat_settings or config.BeatSettings()
 
         if filepath is not None:
+            if not os.path.exists(filepath):
+                raise FileNotFoundError(f"Song file does not exist: {filepath}")
             self.song_name, self.song_format = self.get_song_name_and_format()
             self.load_song_audio()
             self.load_beats()
@@ -76,8 +78,17 @@ class Song():
         self.duration_seconds = self.audio.shape[0] / self.sample_rate
     
     def get_song_name_and_format(self):
-        # returns ../song_name.song_format -> song_name and song_format
-        return self.filepath.split('/')[-1].split('.')
+        """Return ``(song_name, song_format)`` from a filepath.
+
+        Robust to dots in the filename and Windows separators: the extension is
+        taken from the last suffix, the rest becomes the name.
+        """
+        import os
+        basename = os.path.basename(self.filepath)
+        if '.' not in basename:
+            return basename, ''
+        name, _, fmt = basename.rpartition('.')
+        return name, fmt
 
     def annotate_beats(self, output_filepath):
         bs = self.beat_settings
@@ -110,7 +121,8 @@ class Song():
         if os.path.exists(annotation_beats_path):
             self.beats = np.loadtxt(annotation_beats_path)
         else:
-            # there is no beats annotation
+            # there is no beats annotation - create it, then reload from disk.
             self.annotate_beats(annotation_beats_path)
-            # log here
+            if not os.path.exists(annotation_beats_path):
+                raise IOError(f"Failed to write beat annotations to {annotation_beats_path}")
             self.load_beats()

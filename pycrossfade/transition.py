@@ -6,100 +6,76 @@ from .song import Song
 
 
 def time_stretch_gradually_in_downbeats(song, final_factor):
-    # Since we are time stretching *in-between* down beats, dbeat array has to
-    # include the +1 dbeat in itself
+    """Time-stretch each downbeat fragment by a gradually increasing factor.
+
+    Factors are built with ``np.linspace`` so the last fragment is guaranteed to
+    reach ``final_factor`` (the old ``np.arange`` float-step could silently miss
+    the endpoint). ``final_factor == 1`` is a clean early return.
+    """
     audio = song.audio
-
-    if final_factor == 1:
-        return audio
-
     dbeats = song.get_downbeats()
 
-    ts_factor_step_len = (final_factor - 1.0) / (len(dbeats) - 1)
+    if final_factor == 1 or len(dbeats) < 2:
+        return audio
 
-    ts_factors = np.arange(1.0, final_factor, ts_factor_step_len)[1:]
+    ts_factors = np.linspace(1.0, final_factor, len(dbeats))
 
     time_stretched_audio_slices = []
-    for i in range(len(ts_factors)):
-        # get the current factor
-        factor = ts_factors[i]
-        slice = time_stretch(audio[dbeats[i]:dbeats[i + 1]], factor)
-        time_stretched_audio_slices.append(slice)
+    for i in range(len(dbeats) - 1):
+        factor = float(ts_factors[i])
+        frag = audio[dbeats[i]:dbeats[i + 1]]
+        time_stretched_audio_slices.append(time_stretch(frag, factor))
 
     output = np.concatenate(time_stretched_audio_slices)
     return output
+
+def time_stretch_beatmatch_fragment(master_audio, master_cur_idx, master_next_idx,
+                                   slave_cur_idx, slave_next_idx):
+    """Time-stretch one master fragment so it lines up with a slave fragment.
+
+    The stretch factor is the master/slave length ratio; the result is trimmed
+    or zero-padded to exactly ``slave_next_idx - slave_cur_idx`` frames.
+    """
+    slave_dbeat_diff_idx = slave_next_idx - slave_cur_idx
+    ts_factor = (master_next_idx - master_cur_idx) / slave_dbeat_diff_idx
+
+    master_audio_frag = master_audio[master_cur_idx:master_next_idx]
+    ts_maf = time_stretch(master_audio_frag, ts_factor)
+
+    # floating-point stretch factors can overshoot/short the target length by a
+    # few frames; trim or zero-pad so concatenation stays exact.
+    if len(ts_maf) > slave_dbeat_diff_idx:
+        return ts_maf[:slave_dbeat_diff_idx]
+    if len(ts_maf) < slave_dbeat_diff_idx:
+        pad = np.zeros(slave_dbeat_diff_idx - len(ts_maf))
+        return np.concatenate((ts_maf, pad))
+    return ts_maf
+
 
 def beatmatch_to_slave(master_song, slave_song):
     master_audio = master_song.audio
     master_dbeats = master_song.get_downbeats()
     slave_audio = slave_song.audio
-    slave_dbeats= slave_song.get_downbeats()
+    slave_dbeats = slave_song.get_downbeats()
 
     if len(master_dbeats) != len(slave_dbeats):
         raise Exception(f"master_dbeats({len(master_dbeats)}) and slave_dbeats({len(slave_dbeats)}) is not same length")
 
     len_beatmatch_dbeats = len(master_dbeats)
 
-
-    
     # Time stretching between every dbeat, according their respective time difference
     time_stretched_master_fadeout_audio_fragments = []
-    master_next_idx = None
     for i in range(len_beatmatch_dbeats - 1):
-        # these are dbeats
-        master_cur_idx, master_next_idx = master_dbeats[i], master_dbeats[i + 1]
-        slave_cur_idx, slave_next_idx = slave_dbeats[i], slave_dbeats[i + 1]
+        m_cur, m_next = master_dbeats[i], master_dbeats[i + 1]
+        s_cur, s_next = slave_dbeats[i], slave_dbeats[i + 1]
+        frag = time_stretch_beatmatch_fragment(master_audio, m_cur, m_next, s_cur, s_next)
+        time_stretched_master_fadeout_audio_fragments.append(frag)
 
-        # getting the next_dbeat_index - current_dbeat_index difference
-        master_dbeat_diff_idx = master_next_idx - master_cur_idx
-        slave_dbeat_diff_idx = slave_next_idx - slave_cur_idx
-
-        # calculating the time stretch factor
-        ts_factor = master_dbeat_diff_idx / slave_dbeat_diff_idx
-
-        # getting the masters audio fragments for that downbeat indices
-        master_audio_frag = master_audio[master_cur_idx:master_next_idx]
-
-        ts_maf = time_stretch(master_audio_frag, ts_factor)
-
-        # when time stretching with floating point factors, created audio can be more or less in length
-        # so we are fixing that here. Its usually 20-50 frame indices difference, so its inaudible to cut it off
-        if len(ts_maf) > slave_dbeat_diff_idx:
-            ts_maf = ts_maf[:slave_dbeat_diff_idx]
-        elif len(ts_maf) < slave_dbeat_diff_idx:
-            ts_maf = np.concatenate((ts_maf, np.zeros(slave_dbeat_diff_idx - len(ts_maf))))
-
-        # adding the current dbeats time stretched master audio fragment to the list
-        # we will add them together later.
-        time_stretched_master_fadeout_audio_fragments.append(ts_maf)
-
-    # ------ Adding the last part ------
-    master_cur_idx, master_next_idx = master_dbeats[-1], len(master_audio)
-    slave_cur_idx, slave_next_idx = slave_dbeats[-1], len(slave_audio)
-    # getting the next_dbeat_index - current_dbeat_index difference
-    master_dbeat_diff_idx = master_next_idx - master_cur_idx
-    slave_dbeat_diff_idx = slave_next_idx - slave_cur_idx
-    # calculating the time stretch factor
-    ts_factor = master_dbeat_diff_idx / slave_dbeat_diff_idx
-
-    # getting the masters audio fragments for that downbeat indices
-    master_audio_frag = master_audio[master_cur_idx:master_next_idx]
-
-    ts_maf = time_stretch(master_audio_frag, ts_factor)
-
-
-    # when time stretching with floating point factors, created audio can be more or less in length
-    # so we are fixing that here. Its usually 20-50 frame indices difference, so its inaudible to cut it off
-    if len(ts_maf) > slave_dbeat_diff_idx:
-        ts_maf = ts_maf[:slave_dbeat_diff_idx]
-    elif len(ts_maf) < slave_dbeat_diff_idx:
-        ts_maf = np.concatenate((ts_maf, np.zeros(slave_dbeat_diff_idx - len(ts_maf))))
-
-    # adding the current dbeats time stretched master audio fragment to the list
-    # we will add them together later.
-    time_stretched_master_fadeout_audio_fragments.append(ts_maf)
-
-    # ------ END Adding the last part ------
+    # ------ Adding the last part ------ (tail fragment is the same operation)
+    m_cur, m_next = master_dbeats[-1], len(master_audio)
+    s_cur, s_next = slave_dbeats[-1], len(slave_audio)
+    tail = time_stretch_beatmatch_fragment(master_audio, m_cur, m_next, s_cur, s_next)
+    time_stretched_master_fadeout_audio_fragments.append(tail)
 
     # putting time_stretched_master_fadeout_audio_fragments together
     master_beatmatched_to_slave_audio = np.concatenate(time_stretched_master_fadeout_audio_fragments)
@@ -129,6 +105,8 @@ def crop_audio_and_dbeats(song, start_dbeat, end_dbeat):
     new_song = Song()
     new_song.audio = cropped_audio
     new_song.downbeats = cropped_dbeats
+    new_song.sample_rate = song.sample_rate
+    new_song.num_channels = song.num_channels
     return new_song
     
 def crossfade(master_song, slave_song, len_crossfade=8, len_time_stretch=8, settings=None):

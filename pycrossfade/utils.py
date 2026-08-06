@@ -21,39 +21,35 @@ def onset_mark_downbeats(song):
     dbeats = song.get_downbeats()
     return onset_mark_at_indices(song.audio, dbeats)
 
-def add_beep_to_audio(audio, beep_index, beep_duration=0.1, beep_frequency=1000, sample_rate=44100):
+def add_beep_to_audio(audio, beep_index, beep_duration=0.1, beep_frequency=1000,
+                      sample_rate=44100, amplitude=0.5):
+    """Return a copy of ``audio`` with a short enveloped beep added at ``beep_index``.
+
+    The input is never mutated. The beep gets a cosine fade-in/out envelope so
+    it cannot click. Stereo arrays are handled per-channel.
     """
-    Add a beep sound to an existing audio array at a specific index.
-    
-    Parameters:
-    - audio: Input audio numpy array
-    - beep_index: Index where the beep should start
-    - beep_duration: Duration of the beep in seconds (default 0.1s)
-    - beep_frequency: Frequency of the beep in Hz (default 1000 Hz)
-    - sample_rate: Audio sample rate (default 44100 Hz)
-    
-    Returns:
-    - Modified audio array with beep added
-    """
-    # Create time array for the beep
-    t = np.linspace(0, beep_duration, 
-                    int(beep_duration * sample_rate), 
-                    endpoint=False)
-    
-    # Generate sine wave for the beep
+    n_samples = int(beep_duration * sample_rate)
+    t = np.linspace(0.0, beep_duration, n_samples, endpoint=False)
     beep = np.sin(2 * np.pi * beep_frequency * t)
-    
-    # Ensure beep doesn't exceed original audio length
-    if beep_index + len(beep) > len(audio):
-        beep = beep[:len(audio) - beep_index]
-    
-    # # Create a copy of the original audio to modify
-    # modified_audio = audio.copy()
-    
-    # Add the beep to the audio at the specified index
-    audio[beep_index:beep_index+len(beep)] += beep
-    
-    return audio
+
+    # cosine envelope (10% rise/fall) to avoid clicks
+    env = np.ones(n_samples)
+    fade_n = max(1, int(0.1 * n_samples))
+    env[:fade_n] *= 0.5 * (1.0 - np.cos(np.pi * np.arange(fade_n) / fade_n))
+    env[-fade_n:] *= 0.5 * (1.0 - np.cos(np.pi * np.arange(fade_n)[::-1] / fade_n))
+    beep = amplitude * beep * env
+
+    # clip beep at the end of the audio
+    end = min(beep_index + n_samples, audio.shape[0])
+    if end <= beep_index:
+        return audio.copy()
+
+    modified = audio.copy()
+    if audio.ndim == 1:
+        modified[beep_index:end] += beep[:end - beep_index]
+    else:
+        modified[beep_index:end] += beep[:end - beep_index, None]
+    return modified
 
 
 # def save_music_extractor_results(song):

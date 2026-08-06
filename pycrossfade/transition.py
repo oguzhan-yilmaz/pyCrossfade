@@ -202,19 +202,33 @@ def crossfade(master_song, slave_song, len_crossfade=8, len_time_stretch=8, sett
     slave_fadein_end_idx = slave_p_dbeats[0] + len(new_slave_fadedin)
 
     master_initial_audio = master_song.audio[:ts_start_idx]
+    slave_remaining_audio = slave_song.audio[slave_fadein_end_idx:]
+
+    # optional loudness balancing (replay-gain / manual offsets)
+    from .utils import replay_gain_offset
+    if settings.master_gain_db:
+        master_initial_audio = replay_gain_offset(master_initial_audio, settings.master_gain_db)
+        time_stretch_audio = replay_gain_offset(time_stretch_audio, settings.master_gain_db)
+    if settings.slave_gain_db:
+        slave_remaining_audio = replay_gain_offset(slave_remaining_audio, settings.slave_gain_db)
 
 
     crossfade_start_idx = ts_start_idx+time_stretch_audio.size
     slave_start_idx = crossfade_start_idx+crossfade_part_audio.size       
      
     slave_remaining_song = crop_audio_and_dbeats(slave_fadein_song, slave_dbeats_end, -1)
-    slave_remaining_audio = slave_song.audio[slave_fadein_end_idx:]
     resulted_audio = np.concatenate([
         master_initial_audio,
         time_stretch_audio,
         crossfade_part_audio,
         slave_remaining_audio
     ])
+
+    # click protection at the concat seams (length-neutral)
+    from .utils import click_protect
+    resulted_audio = click_protect(resulted_audio,
+                                   [crossfade_start_idx, slave_start_idx],
+                                   sample_rate=sample_rate)
 
     return {
         'master_initial_audio': master_song.audio[:ts_start_idx],

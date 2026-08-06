@@ -152,6 +152,48 @@ def save_audio(audio, filename, file_format='wav', bit_rate=320):
 
 
 
+def click_protect(audio, boundary_indices, sample_rate=44100, fade_ms=3):
+    """Apply short cosine fade-out/fade-in at splice boundaries to kill clicks.
+
+    ``boundary_indices`` are the frame indices where segments were concatenated;
+    a few milliseconds before/after each boundary is faded so the seam doesn't
+    click. Returns a new array; the input is never mutated.
+    """
+    import numpy as np
+    n = max(1, int(fade_ms / 1000.0 * sample_rate))
+    out = audio.copy()
+    for idx in boundary_indices:
+        if idx <= 0 or idx >= audio.shape[0]:
+            continue
+        # fade-out the tail of the previous segment
+        lo, hi = max(0, idx - n), idx
+        fade_out = np.linspace(1.0, 0.0, hi - lo)
+        if audio.ndim == 1:
+            out[lo:hi] *= fade_out
+        else:
+            out[lo:hi] *= fade_out[:, None]
+        # fade-in the head of the next segment
+        lo2, hi2 = idx, min(audio.shape[0], idx + n)
+        fade_in = np.linspace(0.0, 1.0, hi2 - lo2)
+        if audio.ndim == 1:
+            out[lo2:hi2] *= fade_in
+        else:
+            out[lo2:hi2] *= fade_in[:, None]
+    return out
+
+
+def replay_gain_offset(audio, gain_db, sample_rate=44100, num_channels=None):
+    """Apply a replay-gain offset (in dB) to the whole audio array.
+
+    ``gain_db`` is the replay gain value Essentia reports (e.g. -10.46). A
+    positive offset boosts; the gain is applied as a linear multiplier so the
+    relative mix stays intact. Returns a new array; never mutates.
+    """
+    import numpy as np
+    factor = 10.0 ** (gain_db / 20.0)
+    return audio * factor
+
+
 def does_annotations_folder_exist(folder_name=False):
     if not folder_name:
         folder_name = config.ANNOTATIONS_DIRECTORY

@@ -14,6 +14,7 @@ class Song():
         self.beats = None
         self.downbeats = None
         self.duration_seconds = None
+        self.replay_gain = None
         self.attributes = {}
         self.audio_settings = audio_settings or config.AudioSettings()
         self.beat_settings = beat_settings or config.BeatSettings()
@@ -44,7 +45,13 @@ class Song():
     def extract(self):
         result = utils.music_extractor(self)
         utils.print_dict_as_table(result, header_key="Extractor Attribute", header_value="Value")
-        
+
+    def extract_replay_gain(self):
+        """Compute and store the song's replay gain (dB) via Essentia."""
+        from essentia.standard import MusicExtractor
+        features, _ = MusicExtractor()(self.filepath)
+        self.replay_gain = float(features['metadata.audio_properties.replay_gain'])
+        return self.replay_gain
 
     def print_attribute_table(self, print_header=True):
         utils.print_dict_as_table(self.attributes, header_key="Attribute", header_value="Value", print_header=print_header)

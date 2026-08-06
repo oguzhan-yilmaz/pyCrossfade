@@ -74,6 +74,9 @@ class CrossfadeSettings:
     len_crossfade: int = 8
     len_time_stretch: int = 8
     mark_transitions: bool = False
+    # optional manual loudness offsets (dB) applied before the crossfade
+    master_gain_db: float = 0.0
+    slave_gain_db: float = 0.0
     fade: FadeSettings = field(default_factory=FadeSettings)
     eq: EQSettings = field(default_factory=EQSettings)
 

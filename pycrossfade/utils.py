@@ -130,12 +130,29 @@ def time_stretch(audio, factor, sample_rate=44100):
 
 
 def load_audio(filepath):
-    # returns loaded mono audio.
-    return MonoLoader(filename=filepath)()
+    """Load audio (mono or stereo) and return ``(audio, sample_rate, num_channels)``.
+
+    ``audio`` keeps the file's native channel layout; ``sample_rate`` is the
+    file's real rate (no more hardcoded 44100).
+    """
+    from essentia.standard import AudioLoader
+    result = AudioLoader(filename=filepath)()
+    audio, sample_rate, num_channels = result[0], result[1], result[2]
+    return audio, int(sample_rate), int(num_channels)
+
+
+# Backward-compatible single-return wrapper for the deprecated scripted API.
+def load_audio_mono(filepath):
+    audio, _, _ = load_audio(filepath)
+    if audio.ndim > 1:
+        audio = np.mean(audio, axis=1)
+    return audio
 
 
 def save_audio(audio, filename, file_format='wav', bit_rate=320):
-    MonoWriter(filename=filename, bitrate=bit_rate, format=file_format)(audio)
+    """Save audio as mono or stereo depending on ``audio``'s shape."""
+    from essentia.standard import AudioWriter
+    AudioWriter(filename=filename, bitrate=bit_rate, format=file_format)(audio)
 
 
 
@@ -161,18 +178,42 @@ def path_to_annotation_file(annt_folder_name, file_name, file_format='txt'):
     return join(annt_folder_name, file_name + '.' + file_format)    
 
 
-def linear_fade_volume(audio, start_volume=0.0, end_volume=1.0):
+def linear_fade_volume(audio, start_volume=0.0, end_volume=1.0, profile='linear'):
+    """Apply a volume fade from ``start_volume`` to ``end_volume``.
+
+    ``profile`` selects the gain curve: 'linear', 'cosine' or 'equal_power'.
+    The returned array is a new array; the input is never mutated.
+    """
     import numpy as np
 
     if start_volume == end_volume:
         return audio
 
-    length = audio.size
-    profile = np.sqrt(np.linspace(start_volume, end_volume, length))
-    return audio * profile
+    length = audio.shape[0]
+    t = np.linspace(0.0, 1.0, length)
+    if profile == 'linear':
+        gains = np.linspace(start_volume, end_volume, length)
+    elif profile == 'cosine':
+        gains = start_volume + (end_volume - start_volume) * 0.5 * (1.0 - np.cos(np.pi * t))
+    elif profile == 'equal_power':
+        gains = np.sqrt(np.linspace(start_volume ** 2, end_volume ** 2, length))
+    else:
+        raise ValueError(f'Unknown fade profile: {profile}')
+
+    if audio.ndim == 1:
+        return audio * gains
+    # stereo (N, 2) - broadcast the gain profile over channels
+    return audio * gains[:, None]
 
 
-def linear_fade_filter(audio, filter_type, start_volume=0.0, end_volume=1.0):
+def linear_fade_filter(audio, filter_type, start_volume=0.0, end_volume=1.0,
+                       sample_rate=44100, eq_settings=None):
+    """Shelf a low/high band from ``start_volume`` to ``end_volume``.
+
+    Unlike the original, the filter coefficients are rebuilt per step from the
+    settings (no hardcoded magic numbers, no reaching into ``_b_coeffs``) and
+    filter state is carried between steps via ``zi`` to avoid zipper noise.
+    """
     from yodel.filter import Biquad
     import numpy as np
     from scipy.signal import lfilter
@@ -180,33 +221,47 @@ def linear_fade_filter(audio, filter_type, start_volume=0.0, end_volume=1.0):
     if start_volume == end_volume:
         return audio
 
-    SAMPLE_RATE = 44100
-    LOW_CUTOFF = 70
-    MID_CENTER = 1000
-    HIGH_CUTOFF = 13000
-    Q = 1.0 / np.sqrt(2)
-    NUM_STEPS = 20 if start_volume != end_volume else 1
+    if eq_settings is None:
+        eq_settings = config.EQSettings()
 
-    bquad_filter = Biquad()
-    length = audio.size  # Assumes mono audio
+    num_steps = max(1, eq_settings.num_steps)
+    length = audio.shape[0]
+    profile = np.linspace(start_volume, end_volume, num_steps)
+    output_audio = np.zeros(audio.shape, dtype=audio.dtype)
 
-    profile = np.linspace(start_volume, end_volume, NUM_STEPS)
-    output_audio = np.zeros(audio.shape)
+    # per-channel filter state so stereo isn't cross-contaminated
+    zi = None
+    for i in range(num_steps):
+        start_idx = int((i / float(num_steps)) * length)
+        end_idx = int(((i + 1) / float(num_steps)) * length)
+        if end_idx <= start_idx:
+            continue
 
-    for i in range(NUM_STEPS):
-        start_idx = int((i / float(NUM_STEPS)) * length)
-        end_idx = int(((i + 1) / float(NUM_STEPS)) * length)
+        # gain maps 0..1 -> full shelf (gain_db) .. 0
+        gain = -eq_settings.gain_db * (1.0 - profile[i])
+        bquad_filter = Biquad()
         if filter_type == 'low_shelf':
-            bquad_filter.low_shelf(SAMPLE_RATE, LOW_CUTOFF, Q, -int(26 * (1.0 - profile[i])))
+            bquad_filter.low_shelf(sample_rate, eq_settings.low_cutoff, eq_settings.q, gain)
         elif filter_type == 'high_shelf':
-            bquad_filter.high_shelf(SAMPLE_RATE, HIGH_CUTOFF, Q, -int(26 * (1.0 - profile[i])))
+            bquad_filter.high_shelf(sample_rate, eq_settings.high_cutoff, eq_settings.q, gain)
         else:
-            raise Exception('Unknown filter type: ' + filter_type)
-        # ~ bquad_filter.process(audio[start_idx : end_idx], output_audio[start_idx : end_idx]) # This was too slow, code beneath is faster!
+            raise ValueError('Unknown filter type: ' + filter_type)
+
         b = bquad_filter._b_coeffs
         a = bquad_filter._a_coeffs
-        a[
-            0] = 1.0  # Normalizing the coefficients is already done in the yodel object, but a[0] is never reset to 1.0 after division!
-        output_audio[start_idx: end_idx] = lfilter(b, a, audio[start_idx: end_idx]).astype('float32')
+        a[0] = 1.0  # yodel normalizes coefficients but leaves a[0] != 1
+
+        if audio.ndim == 1:
+            y, zi = lfilter(b, a, audio[start_idx:end_idx], zi=zi)
+            output_audio[start_idx:end_idx] = y
+        else:
+            # stereo: run each channel with its own state
+            new_zi = []
+            for ch in range(audio.shape[1]):
+                zi_ch = None if zi is None else zi[ch]
+                y, zi_ch = lfilter(b, a, audio[start_idx:end_idx, ch], zi=zi_ch)
+                output_audio[start_idx:end_idx, ch] = y
+                new_zi.append(zi_ch)
+            zi = new_zi
 
     return output_audio

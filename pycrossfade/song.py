@@ -6,15 +6,18 @@ from . import config
 
 
 class Song():
-    def __init__(self, filepath=None):
+    def __init__(self, filepath=None, audio_settings=None, beat_settings=None):
         self.filepath = filepath
         self.audio = None
-        self.sample_rate = 44100
+        self.sample_rate = None
+        self.num_channels = None
         self.beats = None
         self.downbeats = None
         self.duration_seconds = None
         self.attributes = {}
-        
+        self.audio_settings = audio_settings or config.AudioSettings()
+        self.beat_settings = beat_settings or config.BeatSettings()
+
         if filepath is not None:
             self.song_name, self.song_format = self.get_song_name_and_format()
             self.load_song_audio()
@@ -65,15 +68,21 @@ class Song():
         return f'{int(self.duration_seconds//60)}:{round(self.duration_seconds%60)}'
         
     def load_song_audio(self):
-        self.audio = utils.load_audio(self.filepath)
-        self.duration_seconds = self.audio.size / self.sample_rate
+        audio, sample_rate, num_channels = utils.load_audio(self.filepath)
+        self.audio = audio
+        self.sample_rate = self.audio_settings.sample_rate or sample_rate
+        self.num_channels = self.audio_settings.num_channels or num_channels
+        # duration is frames / sample rate regardless of channel count
+        self.duration_seconds = self.audio.shape[0] / self.sample_rate
     
     def get_song_name_and_format(self):
         # returns ../song_name.song_format -> song_name and song_format
         return self.filepath.split('/')[-1].split('.')
 
     def annotate_beats(self, output_filepath):
-        downbeats_proc = madmom.features.DBNDownBeatTrackingProcessor(beats_per_bar=[4], fps=100)
+        bs = self.beat_settings
+        downbeats_proc = madmom.features.DBNDownBeatTrackingProcessor(
+            beats_per_bar=list(bs.beats_per_bar), fps=bs.fps)
         activations = madmom.features.RNNDownBeatProcessor()(self.filepath)
         beats = downbeats_proc(activations)
         np.savetxt(output_filepath, beats, newline="\n")
@@ -93,7 +102,7 @@ class Song():
         return self.downbeats
 
     def load_beats(self):
-        annotations_folder_name = config.ANNOTATIONS_DIRECTORY
+        annotations_folder_name = self.beat_settings.annotations_directory
         utils.create_annotations_folder(annotations_folder_name)
 
         annotation_beats_path = utils.path_to_annotation_file(annotations_folder_name, self.song_name)

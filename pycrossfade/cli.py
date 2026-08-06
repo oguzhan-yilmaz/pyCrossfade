@@ -25,37 +25,54 @@ def crossfade(
         output: Annotated[ Optional[str], typer.Option('--output', '-o', help="Save the output audio to") ] = "",
         verbose: Annotated[ Optional[bool], typer.Option('--verbose', '-v',help="Print details about the crossfade") ] = False,
         mark_transitions: Annotated[ Optional[bool], typer.Option('--mark-transitions',help="Play a beep sound at time-stretch, crossfade, and slave starts") ] = False,
+        fade_profile: Annotated[ Optional[str], typer.Option('--fade-profile',help="Volume fade curve: linear, cosine, equal_power") ] = None,
+        master_gain: Annotated[ Optional[float], typer.Option('--master-gain',help="Master loudness offset in dB (replay-gain style)") ] = 0.0,
+        slave_gain: Annotated[ Optional[float], typer.Option('--slave-gain',help="Slave loudness offset in dB (replay-gain style)") ] = 0.0,
+        sample_rate: Annotated[ Optional[int], typer.Option('--sample-rate',help="Override the output sample rate") ] = None,
     ):
-    
-    # print(f"filepath={filepath}")
-    # print("> Processing master audio...")
-    master_filepath = config.BASE_AUDIO_DIRECTORY+master_filepath
-    master_song = Song(master_filepath)
-    # print("> Processing slave audio...")
 
-    slave_filepath = config.BASE_AUDIO_DIRECTORY+slave_filepath
-    slave_song = Song(slave_filepath)
-    crossfade = transition.crossfade(master_song, slave_song, len_crossfade=len_crossfade, len_time_stretch=len_time_stretch)
+    if len_crossfade < 1:
+        raise typer.BadParameter("--len-crossfade must be >= 1")
+    if len_time_stretch < 0:
+        raise typer.BadParameter("--len-time-stretch must be >= 0")
 
-    crossfade
+    settings = config.CrossfadeSettings(
+        len_crossfade=len_crossfade,
+        len_time_stretch=len_time_stretch,
+        mark_transitions=mark_transitions,
+        master_gain_db=master_gain,
+        slave_gain_db=slave_gain,
+    )
+    if fade_profile:
+        settings.fade.profile = fade_profile
+    audio_settings = config.AudioSettings(sample_rate=sample_rate) if sample_rate else None
+
+    master_song = Song(config.BASE_AUDIO_DIRECTORY + master_filepath,
+                       audio_settings=audio_settings)
+    slave_song = Song(config.BASE_AUDIO_DIRECTORY + slave_filepath,
+                      audio_settings=audio_settings)
+
+    result = transition.crossfade(master_song, slave_song, settings=settings)
+
     if not output:
         output = f"crossfade-{master_song.song_name}---{slave_song.song_name}.wav"
-    output = config.BASE_AUDIO_DIRECTORY+output
+    output = config.BASE_AUDIO_DIRECTORY + output
 
-    audio = crossfade['audio']
+    audio = result.audio
     if mark_transitions:
-        mark_indices = (crossfade['time_stretch_start_idx'],crossfade['crossfade_start_idx'],crossfade['slave_start_idx'])
+        mark_indices = (result.time_stretch_start_idx,
+                        result.crossfade_start_idx,
+                        result.slave_start_idx)
         audio = utils.onset_mark_at_indices(audio, mark_indices)
     utils.save_audio(audio, output)
     if verbose:
-        crossfade['saved_file'] = output
-        crossfade.pop('slave_remaining_song')
-        crossfade.pop('time_stretch_audio')
-        crossfade.pop('crossfade_part_audio')
-        crossfade.pop('audio')
-        crossfade.pop('slave_remaining_audio')
-        crossfade.pop('master_initial_audio')
-        utils.print_dict_as_table(crossfade)
+        table = result.to_dict()
+        table['saved_file'] = output
+        for key in ('slave_remaining_song', 'time_stretch_audio',
+                    'crossfade_part_audio', 'audio', 'slave_remaining_audio',
+                    'master_initial_audio'):
+            table.pop(key, None)
+        utils.print_dict_as_table(table)
     else:
         print(f"Crossfade saved to {output}")
 
@@ -67,36 +84,46 @@ def crossfade_many(
         output: Annotated[ Optional[str], typer.Option('--output', '-o', help="Save the output audio to (song.wav)") ] = "",
         verbose: Annotated[ Optional[bool], typer.Option('--verbose', '-v',help="Print details about the crossfade") ] = False,
         mark_transitions: Annotated[ Optional[bool], typer.Option('--mark-transitions',help="Play a beep sound at time-stretch, crossfade, and slave starts") ] = False,
+        fade_profile: Annotated[ Optional[str], typer.Option('--fade-profile',help="Volume fade curve: linear, cosine, equal_power") ] = None,
     ):
 
-    # print(f"filepath={filepath}")
-    song_list = [Song(config.BASE_AUDIO_DIRECTORY+filepath)  for filepath in song_filepaths]
-    
-    multi_transition = transition.crossfade_multiple(song_list, len_crossfade=len_crossfade, len_time_stretch=len_time_stretch)
-    
-    output_audio = multi_transition['full_transition']
-      
+    if len(song_filepaths) < 3:
+        raise typer.BadParameter("crossfade-many needs at least 3 song filepaths")
+    if len_crossfade < 1:
+        raise typer.BadParameter("--len-crossfade must be >= 1")
+    if len_time_stretch < 0:
+        raise typer.BadParameter("--len-time-stretch must be >= 0")
+
+    settings = config.CrossfadeSettings(len_crossfade=len_crossfade,
+                                       len_time_stretch=len_time_stretch,
+                                       mark_transitions=mark_transitions)
+    if fade_profile:
+        settings.fade.profile = fade_profile
+
+    song_list = [Song(config.BASE_AUDIO_DIRECTORY + fp) for fp in song_filepaths]
+
+    multi_transition = transition.crossfade_multiple(song_list, settings=settings)
+
+    output_audio = multi_transition.full_transition
+
     if mark_transitions:
-        output_audio = utils.onset_mark_at_indices(output_audio, multi_transition['transition_indices'])
-    
+        output_audio = utils.onset_mark_at_indices(output_audio,
+                                                   multi_transition.transition_indices)
+
     if not output:
         output = f"crossfadeMany-{'-'.join(s.song_name for s in song_list)}.wav"
-    output = config.BASE_AUDIO_DIRECTORY+output
-    
+    output = config.BASE_AUDIO_DIRECTORY + output
+
     utils.save_audio(output_audio, output)
 
     if verbose:
-        print('--verbose option is still in development. Please open an issue.')
-        def group_by_three(lst):
-            return [lst[i:i+3] for i in range(0, len(lst), 3)]
-
-        transitions_grouped = multi_transition['transition_indices'][:-1]
-        last_crossfade_ends = multi_transition['transition_indices'][-1]
-        assert len(transitions_grouped)%3==0
-        
-        transition_g = group_by_three(transitions_grouped)
         utils.print_dict_as_table({
+            "Songs": len(song_list),
+            "Transition marks": ", ".join(str(i) for i in multi_transition.transition_indices),
+            "Saved file": output,
         })
+    else:
+        print(f"Crossfade saved to {output}")
         
     
     

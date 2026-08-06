@@ -1,7 +1,76 @@
 import numpy as np
+from dataclasses import dataclass, field
+from typing import List, Optional
 from . import config
 from .utils import time_stretch, linear_fade_volume, linear_fade_filter
 from .song import Song
+
+
+@dataclass
+class Transition:
+    """Typed result of a single two-song crossfade.
+
+    ``audio`` is the full concatenated result. The component slices and their
+    start indices/seconds are also exposed so callers can inspect or re-render
+    the pieces. ``to_dict()`` (and dict-style ``['key']`` access) keep the
+    legacy dict API working.
+    """
+    audio: np.ndarray = field(default=None)
+    master_initial_audio: np.ndarray = field(default=None)
+    time_stretch_audio: np.ndarray = field(default=None)
+    crossfade_part_audio: np.ndarray = field(default=None)
+    slave_remaining_audio: np.ndarray = field(default=None)
+    slave_remaining_song: Optional[Song] = None
+    time_stretch_start_idx: int = 0
+    crossfade_start_idx: int = 0
+    slave_start_idx: int = 0
+    slave_fadein_end_idx: int = 0
+    time_stretch_start_seconds: float = 0.0
+    crossfade_start_seconds: float = 0.0
+    slave_start_seconds: float = 0.0
+    slave_fadein_end_seconds: float = 0.0
+    len_crossfade: int = 8
+    len_time_stretch: int = 8
+
+    def to_dict(self):
+        return {
+            'master_initial_audio': self.master_initial_audio,
+            'slave_remaining_audio': self.slave_remaining_audio,
+            'slave_remaining_song': self.slave_remaining_song,
+            'audio': self.audio,
+            'time_stretch_audio': self.time_stretch_audio,
+            'crossfade_part_audio': self.crossfade_part_audio,
+            'slave_fadein_end_idx': self.slave_fadein_end_idx,
+            'time_stretch_start_idx': self.time_stretch_start_idx,
+            'crossfade_start_idx': self.crossfade_start_idx,
+            'slave_start_idx': self.slave_start_idx,
+            'time_stretch_start_seconds': self.time_stretch_start_seconds,
+            'crossfade_start_seconds': self.crossfade_start_seconds,
+            'slave_start_seconds': self.slave_start_seconds,
+            'slave_fadein_end_seconds': self.slave_fadein_end_seconds,
+            'len_crossfade': self.len_crossfade,
+            'len_time_stretch': self.len_time_stretch,
+        }
+
+    def __getitem__(self, key):
+        """Legacy dict-style access (``crossfade['audio']``)."""
+        return self.to_dict()[key]
+
+
+@dataclass
+class MultiTransition:
+    """Typed result of a multi-song crossfade."""
+    full_transition: np.ndarray = field(default=None)
+    transition_indices: List[int] = field(default_factory=list)
+
+    def to_dict(self):
+        return {
+            'full_transition': self.full_transition,
+            'transition_indices': self.transition_indices,
+        }
+
+    def __getitem__(self, key):
+        return self.to_dict()[key]
 
 
 
@@ -209,67 +278,70 @@ def crossfade(master_song, slave_song, len_crossfade=8, len_time_stretch=8, sett
                                    [crossfade_start_idx, slave_start_idx],
                                    sample_rate=sample_rate)
 
-    return {
-        'master_initial_audio': master_song.audio[:ts_start_idx],
-        'slave_remaining_audio': slave_remaining_audio,
-        'slave_remaining_song': slave_remaining_song,
-        'audio': resulted_audio,
-        'time_stretch_audio': time_stretch_audio,
-        'crossfade_part_audio': crossfade_part_audio,
-
-        'slave_fadein_end_idx': slave_fadein_end_idx,
-        'time_stretch_start_idx': ts_start_idx,
-        'crossfade_start_idx': crossfade_start_idx,
-        'slave_start_idx': slave_start_idx,        
-
-        'time_stretch_start_seconds': ts_start_idx/sample_rate,
-        'crossfade_start_seconds': crossfade_start_idx/sample_rate,
-        'slave_start_seconds': slave_start_idx/sample_rate,
-        'slave_fadein_end_seconds': slave_fadein_end_idx/sample_rate,
-
-        'len_crossfade': len_crossfade,
-        'len_time_stretch': len_time_stretch,
-    }
+    return Transition(
+        audio=resulted_audio,
+        master_initial_audio=master_song.audio[:ts_start_idx],
+        slave_remaining_audio=slave_remaining_audio,
+        slave_remaining_song=slave_remaining_song,
+        time_stretch_audio=time_stretch_audio,
+        crossfade_part_audio=crossfade_part_audio,
+        slave_fadein_end_idx=slave_fadein_end_idx,
+        time_stretch_start_idx=ts_start_idx,
+        crossfade_start_idx=crossfade_start_idx,
+        slave_start_idx=slave_start_idx,
+        time_stretch_start_seconds=ts_start_idx / sample_rate,
+        crossfade_start_seconds=crossfade_start_idx / sample_rate,
+        slave_start_seconds=slave_start_idx / sample_rate,
+        slave_fadein_end_seconds=slave_fadein_end_idx / sample_rate,
+        len_crossfade=len_crossfade,
+        len_time_stretch=len_time_stretch,
+    )
 
 
 
-def crossfade_multiple(song_list, len_crossfade, len_time_stretch):
-    assert len(song_list) >= 3
+def crossfade_multiple(song_list, len_crossfade=8, len_time_stretch=8, settings=None):
+    """Crossfade through 3+ songs, chaining each transition's tail.
 
+    ``settings`` may be a shared ``config.CrossfadeSettings``; otherwise one is
+    built from the length arguments.
+    """
+    if len(song_list) < 3:
+        raise ValueError('crossfade_multiple needs at least 3 songs')
+    if settings is None:
+        settings = config.CrossfadeSettings(len_crossfade=len_crossfade,
+                                           len_time_stretch=len_time_stretch)
 
     output_list = []
     mark_indices = []
     def append_to_output(part):
         output_list.append(part)
-        a= 0
+        a = 0
         for _ in output_list:
-            a+=len(_)   
+            a += len(_)
         mark_indices.append(a)
-        
-    master_song, slave_song, *other_songs = song_list
-        
-    cf = crossfade(master_song, slave_song, len_crossfade, len_time_stretch)
-    
-    append_to_output(cf['master_initial_audio'])
-    append_to_output(cf['time_stretch_audio'])
-    append_to_output(cf['crossfade_part_audio'])
 
-    next_master_song = cf['slave_remaining_song']
+    master_song, slave_song, *other_songs = song_list
+
+    cf = crossfade(master_song, slave_song, settings=settings)
+
+    append_to_output(cf.master_initial_audio)
+    append_to_output(cf.time_stretch_audio)
+    append_to_output(cf.crossfade_part_audio)
+
+    next_master_song = cf.slave_remaining_song
     next_cf = None
     for next_slave_song in other_songs:
-        next_cf = crossfade(next_master_song, next_slave_song, len_crossfade, len_time_stretch)
+        next_cf = crossfade(next_master_song, next_slave_song, settings=settings)
 
-        append_to_output(next_cf['master_initial_audio'])
-        append_to_output(next_cf['time_stretch_audio'])
-        append_to_output(next_cf['crossfade_part_audio'])
-        
-        next_master_song = next_cf['slave_remaining_song']
+        append_to_output(next_cf.master_initial_audio)
+        append_to_output(next_cf.time_stretch_audio)
+        append_to_output(next_cf.crossfade_part_audio)
 
-    append_to_output(next_cf['slave_remaining_audio'])
+        next_master_song = next_cf.slave_remaining_song
+
+    append_to_output(next_cf.slave_remaining_audio)
 
     full_audio = np.concatenate(output_list)
 
-    return {
-        "full_transition": full_audio,
-        "transition_indices": mark_indices
-    }    
+    return MultiTransition(full_transition=full_audio,
+                          transition_indices=mark_indices)    

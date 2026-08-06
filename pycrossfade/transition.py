@@ -1,6 +1,6 @@
 import numpy as np
-from utils import *
-from song import Song
+from .utils import time_stretch, linear_fade_volume, linear_fade_filter
+from .song import Song
 
 
 

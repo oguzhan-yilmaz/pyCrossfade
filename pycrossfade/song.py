@@ -1,8 +1,8 @@
 import numpy as np
-import madmom 
-import utils
+import madmom
+from . import utils
 import os
-import config
+from . import config
 
 
 class Song():

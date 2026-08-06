@@ -1,11 +1,11 @@
 
 import typer
-from song import Song
-import utils
+from .song import Song
+from . import utils
 from typing_extensions import Annotated, Optional, List
-import numpy as np 
-import transition
-import config
+import numpy as np
+from . import transition
+from . import config
 from pprint import pprint
 app = typer.Typer(
     no_args_is_help=True,
@@ -162,8 +162,13 @@ def cut_song(
     print(f"Song cut between downbeats {from_downbeat}:{to_downbeat}/{len(dbeats)} to: {output}")
     
 
-if __name__ == "__main__":
+def main():
+    """Console-script entry point for the pycrossfade CLI."""
     app()
+
+
+if __name__ == "__main__":
+    main()
 
 
 

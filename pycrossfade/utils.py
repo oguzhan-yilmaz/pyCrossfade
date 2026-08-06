@@ -7,7 +7,7 @@ essentia.log.warningActive = False
 
 from essentia.standard import MonoLoader, MonoWriter
 from essentia.standard import MusicExtractor, AudioOnsetsMarker, YamlOutput, RhythmExtractor2013
-import config
+from . import config
 from pprint import pprint
 import numpy as np
 

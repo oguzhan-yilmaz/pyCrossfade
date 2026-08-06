@@ -1,5 +1,11 @@
 *.pyc
 pycrossfade_annotations/
+*.egg-info/
+dist/
+build/
+__pycache__/
+results.json
+*.lock
 .vscode/
 docker-compose.yml
 main.py

@@ -182,6 +182,84 @@ def click_protect(audio, boundary_indices, sample_rate=44100, fade_ms=3):
     return out
 
 
+def _band_filter_stepped(audio, band, gains, eq_settings, sample_rate):
+    """Filter ``audio`` through one band whose gain ramps per step.
+
+    ``band`` is 'low_shelf', 'high_shelf' or 'peaking'. Gains are in dB;
+    filter state (``zi``) is carried between steps to avoid zipper noise.
+    """
+    from yodel.filter import Biquad
+    from scipy.signal import lfilter
+    import numpy as np
+
+    num_steps = len(gains)
+    length = audio.shape[0]
+    output = np.zeros(audio.shape, dtype=audio.dtype)
+    zi = None
+    for i in range(num_steps):
+        start = int(i / float(num_steps) * length)
+        end = int((i + 1) / float(num_steps) * length)
+        if end <= start:
+            continue
+        f = Biquad()
+        if band == 'low_shelf':
+            f.low_shelf(sample_rate, eq_settings.low_cutoff, eq_settings.q, gains[i])
+        elif band == 'high_shelf':
+            f.high_shelf(sample_rate, eq_settings.high_cutoff, eq_settings.q, gains[i])
+        elif band == 'peaking':
+            f.peaking_eq(sample_rate, eq_settings.mid_center, eq_settings.q, gains[i])
+        else:
+            raise ValueError('Unknown band: ' + band)
+        b = f._b_coeffs
+        a = f._a_coeffs
+        a[0] = 1.0  # yodel leaves a[0] != 1 after normalization
+        if audio.ndim == 1:
+            y, zi = lfilter(b, a, audio[start:end], zi=zi)
+            output[start:end] = y
+        else:
+            new_zi = []
+            for ch in range(audio.shape[1]):
+                zi_ch = None if zi is None else zi[ch]
+                y, zi_ch = lfilter(b, a, audio[start:end, ch], zi=zi_ch)
+                output[start:end, ch] = y
+                new_zi.append(zi_ch)
+            zi = new_zi
+    return output
+
+
+def crossfade_eq(master_audio, slave_audio, eq_settings=None, sample_rate=44100,
+                 master_start=0.9, slave_start=0.1):
+    """Combine master-fadeout + slave-fadein with a 3-band DJ crossfade EQ.
+
+    Master shelves low+high down from ``master_start`` to silence; slave shelves
+    low+high up from ``slave_start`` to full; *both* get a mid-range dip at the
+    overlap center for clarity. The gain curves are smoothed per step (no clicks).
+    """
+    import numpy as np
+    if eq_settings is None:
+        eq_settings = config.EQSettings()
+
+    num_steps = max(2, eq_settings.num_steps)
+    t = np.linspace(0.0, 1.0, num_steps)
+
+    master_level = master_start * (1.0 - t)
+    slave_level = slave_start + (1.0 - slave_start) * t
+    mid_dip = -eq_settings.mid_dip_db * np.sin(np.pi * t)
+
+    master_band_gain = -eq_settings.gain_db * (1.0 - master_level)
+    slave_band_gain = -eq_settings.gain_db * (1.0 - slave_level)
+
+    master_eq = _band_filter_stepped(master_audio, 'low_shelf', master_band_gain, eq_settings, sample_rate)
+    master_eq = _band_filter_stepped(master_eq, 'high_shelf', master_band_gain, eq_settings, sample_rate)
+    master_eq = _band_filter_stepped(master_eq, 'peaking', mid_dip, eq_settings, sample_rate)
+
+    slave_eq = _band_filter_stepped(slave_audio, 'low_shelf', slave_band_gain, eq_settings, sample_rate)
+    slave_eq = _band_filter_stepped(slave_eq, 'high_shelf', slave_band_gain, eq_settings, sample_rate)
+    slave_eq = _band_filter_stepped(slave_eq, 'peaking', mid_dip, eq_settings, sample_rate)
+
+    return slave_eq + master_eq
+
+
 def replay_gain_offset(audio, gain_db, sample_rate=44100, num_channels=None):
     """Apply a replay-gain offset (in dB) to the whole audio array.
 

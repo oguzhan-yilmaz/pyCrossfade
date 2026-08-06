@@ -165,39 +165,18 @@ def crossfade(master_song, slave_song, len_crossfade=8, len_time_stretch=8, sett
 
     assert len(master_fadeout_audio) == len(slave_fadein_audio)
 
-    # Sound Effects for Master
+    # Sound Effects for Master & Slave: one 3-band DJ EQ crossfade
     fade_settings = settings.fade
     eq_settings = settings.eq
     sample_rate = master_song.sample_rate or slave_song.sample_rate or 44100
 
-    new_master_fadedout = linear_fade_volume(master_fadeout_audio,
-                                            start_volume=fade_settings.master_start,
-                                            end_volume=fade_settings.master_end,
-                                            profile=fade_settings.profile)
-    new_master_fadedout = linear_fade_filter(new_master_fadedout, 'low_shelf',
-                                            start_volume=fade_settings.master_start,
-                                            end_volume=fade_settings.master_end,
-                                            sample_rate=sample_rate, eq_settings=eq_settings)
-    new_master_fadedout = linear_fade_filter(new_master_fadedout, 'high_shelf',
-                                            start_volume=fade_settings.master_start,
-                                            end_volume=fade_settings.master_end,
-                                            sample_rate=sample_rate, eq_settings=eq_settings)
-
-    # Sound Effects for Slave
-    new_slave_fadedin = linear_fade_volume(slave_fadein_audio,
-                                          start_volume=fade_settings.slave_start,
-                                          end_volume=fade_settings.slave_end,
-                                          profile=fade_settings.profile)
-    new_slave_fadedin = linear_fade_filter(new_slave_fadedin, 'low_shelf',
-                                          start_volume=fade_settings.slave_start,
-                                          end_volume=fade_settings.slave_end,
-                                          sample_rate=sample_rate, eq_settings=eq_settings)
-    new_slave_fadedin = linear_fade_filter(new_slave_fadedin, 'high_shelf',
-                                          start_volume=fade_settings.slave_start,
-                                          end_volume=fade_settings.slave_end,
-                                          sample_rate=sample_rate, eq_settings=eq_settings)
-
-    crossfade_part_audio = new_slave_fadedin + new_master_fadedout
+    from .utils import crossfade_eq
+    crossfade_part_audio = crossfade_eq(
+        master_fadeout_audio, slave_fadein_audio,
+        eq_settings=eq_settings, sample_rate=sample_rate,
+        master_start=fade_settings.master_start,
+        slave_start=fade_settings.slave_start,
+    )
 
     slave_fadein_end_idx = slave_p_dbeats[0] + len(new_slave_fadedin)
 

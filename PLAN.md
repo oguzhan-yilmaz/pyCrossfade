@@ -1,6 +1,6 @@
 # pyCrossfade — Improvement Plan
 
-> Status: **Draft for review**
+> Status: **In progress — Phases 1-7 landed**
 > Scope: core functions, audio settings, crossfade filtering, CLI, packaging, testing.
 
 ---
@@ -118,72 +118,72 @@ CLI → Song(filepath)
 
 ### Phase 2 — Hardcode → Config
 **Goal:** every tunable is a setting, no magic numbers.
-- [ ] Add dataclasses in `config.py`:
+- [x] Add dataclasses in `config.py`:
   - `AudioSettings` (`sample_rate=None` → read from file, `num_channels`, `bit_rate`)
   - `BeatSettings` (`beats_per_bar`, `fps`, annotation dir)
   - `FadeSettings` (`profile: 'equal_power'|'linear'|'cosine'`, `start/end volumes`)
   - `EQSettings` (`low_cutoff`, `mid_center`, `high_cutoff`, `q`, `gain_db`,
     `bands: ['low','mid','high']`, `mid_dip_db`, `num_steps`)
   - `CrossfadeSettings` (`len_crossfade`, `len_time_stretch`, `mark_transitions`)
-- [ ] Thread settings through `Song`, `transition`, `utils`; env vars override defaults.
+- [x] Thread settings through `Song`, `transition`, `utils`; env vars override defaults.
 
 ### Phase 3 — Fix core correctness bugs
-- [ ] `time_stretch_gradually_in_downbeats`: replace `np.arange` with exact factors;
+- [x] `time_stretch_gradually_in_downbeats`: replace `np.arange` with exact factors;
       assert output length ≈ expected; handle `final_factor == 1` early-return cleanly.
-- [ ] Extract `time_stretch_beatmatch_fragment(...)` helper; de-duplicate
+- [x] Extract `time_stretch_beatmatch_fragment(...)` helper; de-duplicate
       `beatmatch_to_slave` loop + tail.
-- [ ] `add_beep_to_audio` → non-mutating; add envelope; return new array.
-- [ ] `Song.get_song_name_and_format` → `pathlib`/`os.path`; robust to dots/Windows;
+- [x] `add_beep_to_audio` → non-mutating; add envelope; return new array.
+- [x] `Song.get_song_name_and_format` → `pathlib`/`os.path`; robust to dots/Windows;
       raise on missing file; guard `load_beats` recursion.
-- [ ] `linear_fade_filter` → rewrite with `scipy`/`yodel` cleanly:
+- [x] `linear_fade_filter` → rewrite with `scipy`/`yodel` cleanly:
       - build one filter per step with proper state carry (`zi`),
       - no manual `_a_coeffs[0]=1.0` hack,
       - continuous (non-quantized) gain mapping.
 
 ### Phase 4 — Audio quality & stereo
-- [ ] `AudioLoader`/`AudioWriter` supporting mono + stereo (`AudioLoader` + `AudioWriter`).
-- [ ] `Song` carries `sample_rate`, `num_channels`, `duration_seconds` correctly
+- [x] `AudioLoader`/`AudioWriter` supporting mono + stereo (`AudioLoader` + `AudioWriter`).
+- [x] `Song` carries `sample_rate`, `num_channels`, `duration_seconds` correctly
       (`audio.shape[0] / sample_rate` for mono, or shape-aware).
-- [ ] Remove all hardcoded `44100`; propagate real sample rate.
-- [ ] Splice click protection: short (2–5 ms) fade-in/out at every concat boundary.
-- [ ] ReplayGain/loudness normalization option (store `replay_gain` on `Song`,
+- [x] Remove all hardcoded `44100`; propagate real sample rate.
+- [x] Splice click protection: short (2-5 ms) fade-in/out at every concat boundary.
+- [x] ReplayGain/loudness normalization option (store `replay_gain` on `Song`,
       apply offset before summing).
 
 ### Phase 5 — Crossfade filtering (the "good stuff")
-- [ ] Replace single shelf-pair with **3-band EQ**:
+- [x] Replace single shelf-pair with **3-band EQ**:
       low (< low_cutoff), mid (around mid_center), high (> high_cutoff).
-- [ ] Implement the **mid-dip crossfade**: master fades out low+high, slave fades in
+- [x] Implement the **mid-dip crossfade**: master fades out low+high, slave fades in
       low+high, while *both* get a mid dip at the overlap center for clarity.
-- [ ] Equal-power fades: master `cos(t)`-ish fade-out, slave `sin(t)`-ish fade-in
+- [x] Equal-power fades: master `cos(t)`-ish fade-out, slave `sin(t)`-ish fade-in
       so summed power stays ~constant (replace `np.linspace`+`sqrt`).
-- [ ] Make EQ curves **non-linear/smoothed** across steps (interp, more steps,
+- [x] Make EQ curves **non-linear/smoothed** across steps (interp, more steps,
       or per-sample coefficient interpolation) to kill zipper noise.
 - [ ] Optionally: EQ the master-fadeout and slave-fadein with *slightly different*
       curves for a musical blend (kick vs. vocals).
 
 ### Phase 6 — Typed API + cleaner CLI
-- [ ] `Transition` dataclass with fields: `audio`, `master_initial_audio`,
+- [x] `Transition` dataclass with fields: `audio`, `master_initial_audio`,
       `time_stretch_audio`, `crossfade_part_audio`, `slave_remaining_audio`,
       and `time_stretch_start_idx/sec`, `crossfade_start_idx/sec`,
       `slave_start_idx/sec`, `slave_fadein_end_idx/sec`.
-- [ ] `crossfade_multiple` returns `MultiTransition(full_transition, transition_indices)`.
-- [ ] Rewrite `crossfade_many --verbose` (fix empty dict / dead code) or drop it.
-- [ ] Add CLI input validation (`len_crossfade >= 1`, `len_time_stretch >= 0`,
+- [x] `crossfade_multiple` returns `MultiTransition(full_transition, transition_indices)`.
+- [x] Rewrite `crossfade_many --verbose` (fix empty dict / dead code) or drop it.
+- [x] Add CLI input validation (`len_crossfade >= 1`, `len_time_stretch >= 0`,
       downbeat bounds, file existence).
-- [ ] Add `--sample-rate`, `--eq-profile`, `--fade-profile`, `--gain` options
+- [x] Add `--sample-rate`, `--eq-profile`, `--fade-profile`, `--gain` options
       mapped to settings dataclasses.
 
 ### Phase 7 — Tests, docs, DX
-- [ ] Unit tests:
+- [x] Unit tests:
   - `time_stretch` factors reach endpoint & length preserved.
   - `beatmatch_to_slave` output lengths equal; no `np.concatenate` shape errors.
   - `linear_fade_volume/filter` output shape == input; stereo-aware.
   - `crop_audio_and_dbeats` negative-index bounds.
   - `crossfade` result lengths: `len(audio)` == master_initial + ts + crossfade + slave_remaining.
   - `add_beep` returns copy, doesn't mutate input.
-- [ ] Test with tiny synthesized mono + stereo fixtures (no real mp3 needed).
-- [ ] CI: run pytest + a smoke `pycrossfade --help` (extend `.github/workflows`).
-- [ ] Update README with new settings/CLI options.
+- [x] Test with tiny synthesized mono + stereo fixtures (no real mp3 needed).
+- [x] CI: run pytest + a smoke `pycrossfade --help` (extend `.github/workflows`).
+- [x] Update README with new settings/CLI options.
 - [ ] Modernize deps if feasible (note madmom/essentia python-version constraints).
 
 ---

@@ -42,9 +42,10 @@ check:
     docker run --rm -v '{{ justfile_directory() }}/pycrossfade:/app/pycrossfade' --entrypoint python3 {{ IMAGE }} -m py_compile pycrossfade/__init__.py pycrossfade/cli.py pycrossfade/song.py pycrossfade/utils.py pycrossfade/transition.py && echo "compile OK"
 
 # Run pytest inside the container (installs pytest if missing)
+TEST_MOUNT := "-v '{{ justfile_directory() }}/pycrossfade:/app/pycrossfade' -v '{{ justfile_directory() }}/tests:/app/tests'"
 test:
-    docker run --rm -v '{{ justfile_directory() }}/pycrossfade:/app/pycrossfade' --entrypoint python3 -m pip install -q pytest {{ IMAGE }}
-    docker run --rm -v '{{ justfile_directory() }}/pycrossfade:/app/pycrossfade' --entrypoint python3 {{ IMAGE }} -m pytest -v
+    docker run --rm {{ TEST_MOUNT }} --entrypoint python3 -m pip install -q pytest {{ IMAGE }}
+    docker run --rm {{ TEST_MOUNT }} --entrypoint python3 {{ IMAGE }} -m pytest -v
 
 # Show CLI help: `just help crossfade` for a subcommand's help
 help *args:

@@ -1,0 +1,28 @@
+name: CI
+on:
+  push:
+    branches: [ master, dev ]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Build image
+        run: docker build -t pycrossfade:ci .
+
+      - name: Install pytest
+        run: docker run --rm --entrypoint python3 pycrossfade:ci -m pip install -q pytest
+
+      - name: Run tests
+        run: >
+          docker run --rm
+          -v "$PWD/pycrossfade:/app/pycrossfade"
+          -v "$PWD/tests:/app/tests"
+          --entrypoint python3 pycrossfade:ci -m pytest -v
+
+      - name: CLI smoke test (--help)
+        run: docker run --rm pycrossfade:ci --help

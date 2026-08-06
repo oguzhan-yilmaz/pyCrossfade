@@ -119,6 +119,8 @@ pycrossfade crossfade --help
       --len-time-stretch 8 \
       --len-crossfade 8 \
       --mark-transitions \
+      --fade-profile equal_power \
+      --master-gain 0 --slave-gain 0 \
       --output my_crossfade.wav \
       horovel-cut-35-65.wav hypnotic-cut-35-65.wav
   slave_fadein_end_idx                               708246
@@ -133,7 +135,54 @@ pycrossfade crossfade --help
   len_time_stretch                                   8
   saved_file                                         /app/audios/my_crossfade.wav
   ```
+  New tunables:
+  - `--fade-profile`: volume curve (`linear`, `cosine`, `equal_power`)
+  - `--master-gain` / `--slave-gain`: loudness offset in dB (replay-gain style)
+  - `--sample-rate`: override the output sample rate
 - `crossfade-many`: Crossfade between min. of 3 songs
+  ```bash
+  $ pycrossfade crossfade-many a.mp3 b.mp3 c.mp3 --fade-profile cosine
+  ```
+
+---
+
+## Settings & Configuration
+
+Every tunable lives in `pycrossfade/config.py` as dataclasses — no more
+hardcoded magic numbers:
+
+- `AudioSettings` — sample rate (defaults to the file's real rate), channel count, bit rate
+- `BeatSettings` — beats-per-bar, madmom fps, annotations directory
+- `FadeSettings` — fade profile + master/slave start/end volumes
+- `EQSettings` — 3-band EQ: low/high cutoffs, mid center, Q, gain, mid dip, steps
+- `CrossfadeSettings` — lengths, marks, optional master/slave gain, the above two
+
+Example:
+
+```python
+from pycrossfade import Song, crossfade, config
+
+settings = config.CrossfadeSettings(
+    len_crossfade=8,
+    len_time_stretch=8,
+    fade=config.FadeSettings(profile='cosine'),
+    eq=config.EQSettings(mid_dip_db=6.0),
+)
+master = Song('master.mp3')
+slave = Song('slave.mp3')
+result = crossfade(master, slave, settings=settings)
+# result is a Transition: result.audio, result.time_stretch_start_seconds, ...
+save_audio(result.audio, 'mix.wav')
+```
+
+`crossfade` returns a typed `Transition` (and `crossfade_multiple` a
+`MultiTransition`) with the full result plus every component slice and its
+start index/seconds. Legacy dict-style access (`result['audio']`) still works.
+
+The crossfade section now uses a **3-band DJ EQ** — master shelves low+high out
+while slave shelves them in, and *both* get a mid-range dip at the overlap
+center for clarity (no muddy blends). Splice seams are click-protected and the
+fades are smooth (no zipper noise).
 
 
 

@@ -247,7 +247,7 @@ def crossfade(master_song, slave_song, len_crossfade=8, len_time_stretch=8, sett
         slave_start=fade_settings.slave_start,
     )
 
-    slave_fadein_end_idx = slave_p_dbeats[0] + len(new_slave_fadedin)
+    slave_fadein_end_idx = slave_p_dbeats[0] + crossfade_part_audio.shape[0]
 
     master_initial_audio = master_song.audio[:ts_start_idx]
     slave_remaining_audio = slave_song.audio[slave_fadein_end_idx:]
@@ -261,8 +261,8 @@ def crossfade(master_song, slave_song, len_crossfade=8, len_time_stretch=8, sett
         slave_remaining_audio = replay_gain_offset(slave_remaining_audio, settings.slave_gain_db)
 
 
-    crossfade_start_idx = ts_start_idx+time_stretch_audio.size
-    slave_start_idx = crossfade_start_idx+crossfade_part_audio.size       
+    crossfade_start_idx = ts_start_idx + time_stretch_audio.shape[0]
+    slave_start_idx = crossfade_start_idx + crossfade_part_audio.shape[0]       
      
     slave_remaining_song = crop_audio_and_dbeats(slave_fadein_song, slave_dbeats_end, -1)
     resulted_audio = np.concatenate([

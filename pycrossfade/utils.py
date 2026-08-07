@@ -122,7 +122,16 @@ def print_dict_as_table(dictionary, header_key=None, header_value=None, print_he
         print(f"{formatted_key} {formatted_value}")
 
 def time_stretch(audio, factor, sample_rate=44100):
-    return pyrb.time_stretch(audio, sample_rate, factor)
+    """Time-stretch audio by ``factor`` (channel-aware).
+
+    Stereo arrays are stretched per-channel and re-stacked so pyrubberband never
+    has to guess a channel layout.
+    """
+    if audio.ndim == 1:
+        return pyrb.time_stretch(audio, sample_rate, factor)
+    channels = [pyrb.time_stretch(audio[:, ch], sample_rate, factor)
+                for ch in range(audio.shape[1])]
+    return np.stack(channels, axis=1)
 
 
 def load_audio(filepath):

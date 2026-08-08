@@ -37,6 +37,14 @@ def test_add_beep_clips_at_end_without_error():
     assert out.shape == audio.shape
 
 
+def test_onset_mark_at_indices_applies_all_beeps():
+    audio = _mono()
+    single = utils.add_beep_to_audio(audio, beep_index=100)
+    double = utils.onset_mark_at_indices(audio, [100, 500])
+    assert not np.array_equal(single, double)
+    assert double.shape == audio.shape
+
+
 # ---------- linear_fade_volume ----------
 @pytest.mark.parametrize('profile', ['linear', 'cosine', 'equal_power'])
 def test_linear_fade_volume_shape_preserved(profile):

@@ -11,10 +11,12 @@ from . import config
 from pprint import pprint
 import numpy as np
 
-def onset_mark_at_indices(audio, indices,sample_rate=44100):
-    marked_audio = None
+def onset_mark_at_indices(audio, indices, sample_rate=44100):
+    marked_audio = audio
     for idx in indices:
-        marked_audio = add_beep_to_audio(audio, idx, beep_duration=0.03, beep_frequency=500, sample_rate=sample_rate)
+        marked_audio = add_beep_to_audio(
+            marked_audio, idx, beep_duration=0.03, beep_frequency=500,
+            sample_rate=sample_rate)
     return marked_audio
 
 def onset_mark_downbeats(song):

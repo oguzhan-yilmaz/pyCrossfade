@@ -4,7 +4,21 @@
 
 pyCrossfade is born out of a personal effort to create a customizable and beat-matched crossfade functionality.
 
-December 2024: ✨added CLI and Docker image✨
+August 2026: **v0.4.0** — installable package, stereo I/O, 3-band DJ EQ, typed API, tests & CI.
+
+December 2024: added CLI and Docker image✨
+
+---
+
+## What's new in v0.4.0
+
+- **Proper package** — `pip install` / `import pycrossfade` works; settings live in dataclasses (`config.py`)
+- **Stereo** — audio keeps its channels end-to-end; sample rate comes from the file
+- **3-band EQ crossfade** — low/high shelves + mid dip; equal-power / cosine / linear fades
+- **Typed results** — `crossfade()` returns a `Transition` (legacy `result['audio']` still works)
+- **CLI tunables** — `--fade-profile`, `--master-gain`, `--slave-gain`, `--sample-rate`
+- **`--mark-transitions`** — beeps at time-stretch start, crossfade start, and crossfade end
+- **Tests & CI** — pytest suite + GitHub Actions; local dev via `just test` / `just run`
 
 ---
 
@@ -126,19 +140,22 @@ pycrossfade crossfade --help
   slave_fadein_end_idx                               708246
   time_stretch_start_idx                             1118817
   crossfade_start_idx                                1757824
-  slave_start_idx                                    2424175
+  crossfade_end_idx                                  2110464
+  slave_start_idx                                    2110464
   time_stretch_start_seconds                         25.37
-  crossfade_start_seconds                            39.85995464852608
-  slave_start_seconds                                54.96995464852608
+  crossfade_start_seconds                            39.86
+  crossfade_end_seconds                              47.86
+  slave_start_seconds                                47.86
   slave_fadein_end_seconds                           16.06
   len_crossfade                                      8
   len_time_stretch                                   8
   saved_file                                         /app/audios/my_crossfade.wav
   ```
-  New tunables:
+  Tunables:
   - `--fade-profile`: volume curve (`linear`, `cosine`, `equal_power`)
   - `--master-gain` / `--slave-gain`: loudness offset in dB (replay-gain style)
   - `--sample-rate`: override the output sample rate
+  - `--mark-transitions`: beep at time-stretch start, crossfade start, and crossfade end
 - `crossfade-many`: Crossfade between min. of 3 songs
   ```bash
   $ pycrossfade crossfade-many a.mp3 b.mp3 c.mp3 --fade-profile cosine
@@ -148,19 +165,18 @@ pycrossfade crossfade --help
 
 ## Settings & Configuration
 
-Every tunable lives in `pycrossfade/config.py` as dataclasses — no more
-hardcoded magic numbers:
+Every tunable lives in `pycrossfade/config.py` as dataclasses:
 
-- `AudioSettings` — sample rate (defaults to the file's real rate), channel count, bit rate
+- `AudioSettings` — sample rate (defaults to the file's rate), channels, bit rate
 - `BeatSettings` — beats-per-bar, madmom fps, annotations directory
 - `FadeSettings` — fade profile + master/slave start/end volumes
-- `EQSettings` — 3-band EQ: low/high cutoffs, mid center, Q, gain, mid dip, steps
+- `EQSettings` — 3-band EQ: cutoffs, mid center, Q, gain, mid dip, steps
 - `CrossfadeSettings` — lengths, marks, optional master/slave gain, the above two
 
 Example:
 
 ```python
-from pycrossfade import Song, crossfade, config
+from pycrossfade import Song, crossfade, save_audio, config
 
 settings = config.CrossfadeSettings(
     len_crossfade=8,
@@ -171,29 +187,25 @@ settings = config.CrossfadeSettings(
 master = Song('master.mp3')
 slave = Song('slave.mp3')
 result = crossfade(master, slave, settings=settings)
-# result is a Transition: result.audio, result.time_stretch_start_seconds, ...
 save_audio(result.audio, 'mix.wav')
+# result is a Transition: result.audio, result.crossfade_end_seconds, ...
 ```
 
 `crossfade` returns a typed `Transition` (and `crossfade_multiple` a
-`MultiTransition`) with the full result plus every component slice and its
-start index/seconds. Legacy dict-style access (`result['audio']`) still works.
+`MultiTransition`) with the full mix plus every component slice and its
+start index/seconds. Legacy dict access (`result['audio']`) still works.
 
-The crossfade section now uses a **3-band DJ EQ** — master shelves low+high out
-while slave shelves them in, and *both* get a mid-range dip at the overlap
-center for clarity (no muddy blends). Splice seams are click-protected and the
-fades are smooth (no zipper noise).
-
-
-
-
+The crossfade uses a **3-band DJ EQ** — master shelves low+high out while
+slave shelves them in, and *both* get a mid-range dip at the overlap center.
+Splice seams are click-protected; fades are smoothed (no zipper noise).
 ---
 
 ## Older pyCrossfade
 
-Before I added the CLI and Docker feature, I created the v0.1.0 tag. Access below:
+Before the v0.4.0 refactor, I tagged earlier releases:
 
-- <https://github.com/oguzhan-yilmaz/pyCrossfade/releases/tag/v0.1.0>
+- <https://github.com/oguzhan-yilmaz/pyCrossfade/releases/tag/v0.3.1> — CLI + Docker (mono)
+- <https://github.com/oguzhan-yilmaz/pyCrossfade/releases/tag/v0.1.0> — original scripted API
 - Older [Scripted Usage](docs/scripted-usage-deprecated.md) documentation
 
 ---
@@ -295,6 +307,6 @@ pyCrossfade lets you define every transition's length in bars, lets take it as _
 
 ### Possible Improvements
 
-- Better(maybe Non-Linear) EQ Filtering
-- Volume Balancing with Replay Gain
-- Developing a better Crossfade EQ Filtering
+- Non-linear EQ filtering per band
+- EBU R128 loudness matching (Essentia already exposes replay gain per track)
+- Musical blend curves (kick vs. vocals) on master/slave fade sections

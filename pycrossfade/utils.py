@@ -216,20 +216,27 @@ def _band_filter_stepped(audio, band, gains, eq_settings, sample_rate):
         elif band == 'high_shelf':
             f.high_shelf(sample_rate, eq_settings.high_cutoff, eq_settings.q, gains[i])
         elif band == 'peaking':
-            f.peaking_eq(sample_rate, eq_settings.mid_center, eq_settings.q, gains[i])
+            f.peak(sample_rate, eq_settings.mid_center, eq_settings.q, gains[i])
         else:
             raise ValueError('Unknown band: ' + band)
         b = f._b_coeffs
         a = f._a_coeffs
         a[0] = 1.0  # yodel leaves a[0] != 1 after normalization
+        # scipy.signal.lfilter only returns the (y, zf) tuple when a non-None
+        # initial state is passed. Seed zero state on the first step so filter state
+        # can be carried across steps (avoids zipper noise).
+        n_state = max(len(a), len(b)) - 1
         if audio.ndim == 1:
+            if zi is None:
+                zi = np.zeros(n_state)
             y, zi = lfilter(b, a, audio[start:end], zi=zi)
             output[start:end] = y
         else:
+            if zi is None:
+                zi = [np.zeros(n_state) for _ in range(audio.shape[1])]
             new_zi = []
             for ch in range(audio.shape[1]):
-                zi_ch = None if zi is None else zi[ch]
-                y, zi_ch = lfilter(b, a, audio[start:end, ch], zi=zi_ch)
+                y, zi_ch = lfilter(b, a, audio[start:end, ch], zi=zi[ch])
                 output[start:end, ch] = y
                 new_zi.append(zi_ch)
             zi = new_zi
@@ -376,15 +383,22 @@ def linear_fade_filter(audio, filter_type, start_volume=0.0, end_volume=1.0,
         a = bquad_filter._a_coeffs
         a[0] = 1.0  # yodel normalizes coefficients but leaves a[0] != 1
 
+        # scipy.signal.lfilter only returns the (y, zf) tuple when a non-None
+        # initial state is passed. Seed zero state on the first step so filter state
+        # can be carried across steps (avoids zipper noise).
+        n_state = max(len(a), len(b)) - 1
         if audio.ndim == 1:
+            if zi is None:
+                zi = np.zeros(n_state)
             y, zi = lfilter(b, a, audio[start_idx:end_idx], zi=zi)
             output_audio[start_idx:end_idx] = y
         else:
             # stereo: run each channel with its own state
+            if zi is None:
+                zi = [np.zeros(n_state) for _ in range(audio.shape[1])]
             new_zi = []
             for ch in range(audio.shape[1]):
-                zi_ch = None if zi is None else zi[ch]
-                y, zi_ch = lfilter(b, a, audio[start_idx:end_idx, ch], zi=zi_ch)
+                y, zi_ch = lfilter(b, a, audio[start_idx:end_idx, ch], zi=zi[ch])
                 output_audio[start_idx:end_idx, ch] = y
                 new_zi.append(zi_ch)
             zi = new_zi

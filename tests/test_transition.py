@@ -72,8 +72,9 @@ def test_crop_basic_and_negative_bounds():
 
 def test_crop_out_of_bounds_raises():
     song = make_song(n_bars=4)
+    # make_song(n_bars=4) -> 5 downbeats (0..4); index 5 is out of bounds
     with pytest.raises(Exception):
-        transition.crop_audio_and_dbeats(song, 0, 4)  # end >= len(dbeats)
+        transition.crop_audio_and_dbeats(song, 0, 5)  # end >= len(dbeats)
 
 
 # ---------- crossfade ----------
@@ -94,9 +95,24 @@ def test_crossfade_result_length_decomposition():
     assert np.isfinite(result.audio).all()
 
 
+def test_crossfade_end_idx_is_crossfade_end():
+    master = make_song(n_bars=20)
+    slave = make_song(n_bars=20)
+    master.audio[::50] = 0.5
+    slave.audio[::50] = 0.5
+    result = transition.crossfade(master, slave, settings=config.CrossfadeSettings())
+    # crossfade end is exactly where the crossfade section stops and slave
+    # remaining begins; slave_start_idx aliases the same frame.
+    assert result.crossfade_end_idx == result.crossfade_start_idx + len(result.crossfade_part_audio)
+    assert result.slave_start_idx == result.crossfade_end_idx
+    assert result['crossfade_end_idx'] == result.crossfade_end_idx
+    assert result['crossfade_end_seconds'] == result.crossfade_end_seconds
+
+
 def test_crossfade_legacy_dict_access_works():
-    master = make_song(n_bars=12)
-    slave = make_song(n_bars=12)
+    # default settings need len_crossfade+len_time_stretch (=16) downbeats
+    master = make_song(n_bars=20)
+    slave = make_song(n_bars=20)
     master.audio[::50] = 0.5
     slave.audio[::50] = 0.5
     result = transition.crossfade(master, slave, settings=config.CrossfadeSettings())
@@ -105,8 +121,9 @@ def test_crossfade_legacy_dict_access_works():
 
 
 def test_crossfade_returns_typed_transition():
-    master = make_song(n_bars=12)
-    slave = make_song(n_bars=12)
+    # default settings need len_crossfade+len_time_stretch (=16) downbeats
+    master = make_song(n_bars=20)
+    slave = make_song(n_bars=20)
     master.audio[::50] = 0.5
     slave.audio[::50] = 0.5
     result = transition.crossfade(master, slave, settings=config.CrossfadeSettings())
@@ -120,7 +137,9 @@ def test_crossfade_multiple_needs_three_songs():
 
 
 def test_crossfade_multiple_returns_typed_multi():
-    songs = [make_song(n_bars=12), make_song(n_bars=12), make_song(n_bars=12)]
+    # default settings need len_crossfade+len_time_stretch (=16) downbeats per
+    # song; the chained slave_remaining_song must keep >=17 downbeats, so use 32 bars
+    songs = [make_song(n_bars=32), make_song(n_bars=32), make_song(n_bars=32)]
     for s in songs:
         s.audio[::50] = 0.5
     result = transition.crossfade_multiple(songs, settings=config.CrossfadeSettings())

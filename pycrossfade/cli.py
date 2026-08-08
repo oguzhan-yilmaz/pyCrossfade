@@ -24,7 +24,7 @@ def crossfade(
         len_crossfade: Annotated[ Optional[int], typer.Option('--len-crossfade', '-c', help="Crossfade length in bars")  ]=8,
         output: Annotated[ Optional[str], typer.Option('--output', '-o', help="Save the output audio to") ] = "",
         verbose: Annotated[ Optional[bool], typer.Option('--verbose', '-v',help="Print details about the crossfade") ] = False,
-        mark_transitions: Annotated[ Optional[bool], typer.Option('--mark-transitions',help="Play a beep sound at time-stretch, crossfade, and slave starts") ] = False,
+        mark_transitions: Annotated[ Optional[bool], typer.Option('--mark-transitions',help="Play a beep at time-stretch start, crossfade start, and crossfade end") ] = False,
         fade_profile: Annotated[ Optional[str], typer.Option('--fade-profile',help="Volume fade curve: linear, cosine, equal_power") ] = None,
         master_gain: Annotated[ Optional[float], typer.Option('--master-gain',help="Master loudness offset in dB (replay-gain style)") ] = 0.0,
         slave_gain: Annotated[ Optional[float], typer.Option('--slave-gain',help="Slave loudness offset in dB (replay-gain style)") ] = 0.0,
@@ -62,7 +62,7 @@ def crossfade(
     if mark_transitions:
         mark_indices = (result.time_stretch_start_idx,
                         result.crossfade_start_idx,
-                        result.slave_start_idx)
+                        result.crossfade_end_idx)
         audio = utils.onset_mark_at_indices(audio, mark_indices)
     utils.save_audio(audio, output)
     if verbose:
@@ -83,7 +83,7 @@ def crossfade_many(
         len_crossfade: Annotated[ Optional[int], typer.Option('--len-crossfade', '-c',help="Crossfade length in bars")]=8,
         output: Annotated[ Optional[str], typer.Option('--output', '-o', help="Save the output audio to (song.wav)") ] = "",
         verbose: Annotated[ Optional[bool], typer.Option('--verbose', '-v',help="Print details about the crossfade") ] = False,
-        mark_transitions: Annotated[ Optional[bool], typer.Option('--mark-transitions',help="Play a beep sound at time-stretch, crossfade, and slave starts") ] = False,
+        mark_transitions: Annotated[ Optional[bool], typer.Option('--mark-transitions',help="Play a beep at time-stretch start, crossfade start, and crossfade end") ] = False,
         fade_profile: Annotated[ Optional[str], typer.Option('--fade-profile',help="Volume fade curve: linear, cosine, equal_power") ] = None,
     ):
 

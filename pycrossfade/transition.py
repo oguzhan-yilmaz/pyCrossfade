@@ -23,10 +23,12 @@ class Transition:
     slave_remaining_song: Optional[Song] = None
     time_stretch_start_idx: int = 0
     crossfade_start_idx: int = 0
+    crossfade_end_idx: int = 0
     slave_start_idx: int = 0
     slave_fadein_end_idx: int = 0
     time_stretch_start_seconds: float = 0.0
     crossfade_start_seconds: float = 0.0
+    crossfade_end_seconds: float = 0.0
     slave_start_seconds: float = 0.0
     slave_fadein_end_seconds: float = 0.0
     len_crossfade: int = 8
@@ -43,9 +45,11 @@ class Transition:
             'slave_fadein_end_idx': self.slave_fadein_end_idx,
             'time_stretch_start_idx': self.time_stretch_start_idx,
             'crossfade_start_idx': self.crossfade_start_idx,
+            'crossfade_end_idx': self.crossfade_end_idx,
             'slave_start_idx': self.slave_start_idx,
             'time_stretch_start_seconds': self.time_stretch_start_seconds,
             'crossfade_start_seconds': self.crossfade_start_seconds,
+            'crossfade_end_seconds': self.crossfade_end_seconds,
             'slave_start_seconds': self.slave_start_seconds,
             'slave_fadein_end_seconds': self.slave_fadein_end_seconds,
             'len_crossfade': self.len_crossfade,
@@ -186,6 +190,10 @@ def crossfade(master_song, slave_song, len_crossfade=8, len_time_stretch=8, sett
     if settings is None:
         settings = config.CrossfadeSettings(len_crossfade=len_crossfade,
                                            len_time_stretch=len_time_stretch)
+    # Settings are the source of truth for the lengths (whether passed explicitly or
+    # built above) - the function args are just convenient defaults.
+    len_crossfade = settings.len_crossfade
+    len_time_stretch = settings.len_time_stretch
 
     # We are getting the required song partitions and their respective dbeats from SongPartition class
     master_p_audio = master_song.audio
@@ -262,7 +270,8 @@ def crossfade(master_song, slave_song, len_crossfade=8, len_time_stretch=8, sett
 
 
     crossfade_start_idx = ts_start_idx + time_stretch_audio.shape[0]
-    slave_start_idx = crossfade_start_idx + crossfade_part_audio.shape[0]       
+    crossfade_end_idx = crossfade_start_idx + crossfade_part_audio.shape[0]
+    slave_start_idx = crossfade_end_idx       
      
     slave_remaining_song = crop_audio_and_dbeats(slave_fadein_song, slave_dbeats_end, -1)
     resulted_audio = np.concatenate([
@@ -288,9 +297,11 @@ def crossfade(master_song, slave_song, len_crossfade=8, len_time_stretch=8, sett
         slave_fadein_end_idx=slave_fadein_end_idx,
         time_stretch_start_idx=ts_start_idx,
         crossfade_start_idx=crossfade_start_idx,
+        crossfade_end_idx=crossfade_end_idx,
         slave_start_idx=slave_start_idx,
         time_stretch_start_seconds=ts_start_idx / sample_rate,
         crossfade_start_seconds=crossfade_start_idx / sample_rate,
+        crossfade_end_seconds=crossfade_end_idx / sample_rate,
         slave_start_seconds=slave_start_idx / sample_rate,
         slave_fadein_end_seconds=slave_fadein_end_idx / sample_rate,
         len_crossfade=len_crossfade,
@@ -310,6 +321,8 @@ def crossfade_multiple(song_list, len_crossfade=8, len_time_stretch=8, settings=
     if settings is None:
         settings = config.CrossfadeSettings(len_crossfade=len_crossfade,
                                            len_time_stretch=len_time_stretch)
+    len_crossfade = settings.len_crossfade
+    len_time_stretch = settings.len_time_stretch
 
     output_list = []
     mark_indices = []

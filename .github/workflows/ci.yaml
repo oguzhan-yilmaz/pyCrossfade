@@ -12,17 +12,16 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Build image
-        run: docker build -t pycrossfade:ci .
-
-      - name: Install pytest
-        run: docker run --rm --entrypoint python3 pycrossfade:ci -m pip install -q pytest
+        run: docker build --platform linux/amd64 -t pycrossfade:ci .
 
       - name: Run tests
+        # Each `docker run --rm` is ephemeral; install pytest and run tests in one container.
         run: >
-          docker run --rm
+          docker run --rm --platform linux/amd64
           -v "$PWD/pycrossfade:/app/pycrossfade"
           -v "$PWD/tests:/app/tests"
-          --entrypoint python3 pycrossfade:ci -m pytest -v
+          --entrypoint sh pycrossfade:ci
+          -c "python3 -m pip install -q pytest && python3 -m pytest -v"
 
       - name: CLI smoke test (--help)
         run: docker run --rm pycrossfade:ci --help

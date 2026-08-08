@@ -39,10 +39,14 @@ def test_add_beep_clips_at_end_without_error():
 
 def test_onset_mark_at_indices_applies_all_beeps():
     audio = _mono()
-    single = utils.add_beep_to_audio(audio, beep_index=100)
-    double = utils.onset_mark_at_indices(audio, [100, 500])
-    assert not np.array_equal(single, double)
-    assert double.shape == audio.shape
+    both = utils.onset_mark_at_indices(audio, [100, 500])
+    # beep at 100 only, and beep at 500 only
+    first = utils.add_beep_to_audio(audio, beep_index=100)
+    second = utils.add_beep_to_audio(audio, beep_index=500)
+    # both beeps present: result differs from either single beep alone
+    assert not np.array_equal(both, first)
+    assert not np.array_equal(both, second)
+    assert both.shape == audio.shape
 
 
 # ---------- linear_fade_volume ----------

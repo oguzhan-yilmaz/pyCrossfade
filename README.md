@@ -22,6 +22,16 @@ December 2024: added CLI and Docker image✨
 
 ---
 
+## Examples
+
+Commented recipes for every crossfade option (CLI flags and Python SDK settings):
+
+- **[examples/](./examples/)** — index
+- **[examples/cli.md](./examples/cli.md)** — `crossfade` / `crossfade-many` with parameter comments
+- **[examples/sdk.py](./examples/sdk.py)** — `CrossfadeSettings`, fade/EQ tuning, `Transition` inspection
+
+---
+
 ## CLI
 
 Since the creation of this project, Python3 and dependencies got updated and stopped working with the pyCrossfade codebase.
@@ -173,7 +183,7 @@ Every tunable lives in `pycrossfade/config.py` as dataclasses:
 - `EQSettings` — 3-band EQ: cutoffs, mid center, Q, gain, mid dip, steps
 - `CrossfadeSettings` — lengths, marks, optional master/slave gain, the above two
 
-Example:
+Example (see **[examples/sdk.py](./examples/sdk.py)** for more):
 
 ```python
 from pycrossfade import Song, crossfade, save_audio, config
